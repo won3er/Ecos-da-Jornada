@@ -1,0 +1,9 @@
+Coloque aqui arquivos de áudio reais (.ogg ou .mp3) se quiser substituir o som procedural.
+
+Depois, registre no fim de js/core/audio.js, por exemplo:
+
+  G.AudioFiles.music.village = 'assets/audio/vila.ogg';
+  G.AudioFiles.music.boss    = 'assets/audio/chefe.ogg';
+  G.AudioFiles.sfx.swing     = 'assets/audio/espada.wav';
+
+Nomes de músicas: title, village, explore, forest, dungeon, sanctum, combat, boss, victory, memory, gameover.

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecos da Jornada — Capítulo I</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="480" height="270"></canvas>
+</div>
+<div id="boot">Carregando…</div>
+
+<!-- Núcleo -->
+<script src="js/core/namespace.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/input.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/core/save.js"></script>
+<script src="js/core/camera.js"></script>
+<script src="js/core/particles.js"></script>
+<script src="js/core/lighting.js"></script>
+<script src="js/core/coroutine.js"></script>
+
+<!-- Gráficos -->
+<script src="js/gfx/font.js"></script>
+<script src="js/gfx/pixel.js"></script>
+<script src="js/gfx/sprites.js"></script>
+<script src="js/gfx/tiles.js"></script>
+<script src="js/gfx/props.js"></script>
+
+<!-- Dados (ponto de troca de IP: nomes, falas, itens) -->
+<script src="js/data/characters.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/skills.js"></script>
+<script src="js/data/quests.js"></script>
+<script src="js/data/dialogue.js"></script>
+
+<!-- Mundo -->
+<script src="js/world/entity.js"></script>
+<script src="js/world/level.js"></script>
+<script src="js/world/objects.js"></script>
+<script src="js/world/npc.js"></script>
+
+<!-- Personagens -->
+<script src="js/actors/combat.js"></script>
+<script src="js/actors/character.js"></script>
+<script src="js/actors/mage.js"></script>
+<script src="js/actors/warrior.js"></script>
+<script src="js/actors/companion.js"></script>
+
+<!-- Inimigos -->
+<script src="js/enemies/enemy.js"></script>
+<script src="js/enemies/types.js"></script>
+<script src="js/enemies/golem.js"></script>
+<script src="js/enemies/boss.js"></script>
+
+<!-- Sistemas -->
+<script src="js/systems/dialogue.js"></script>
+<script src="js/systems/inventory.js"></script>
+<script src="js/systems/quests.js"></script>
+<script src="js/systems/progression.js"></script>
+<script src="js/systems/memory.js"></script>
+
+<!-- Interface -->
+<script src="js/ui/widgets.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/menus.js"></script>
+
+<!-- Fases -->
+<script src="js/levels/registry.js"></script>
+<script src="js/levels/fase1/vila.js"></script>
+<script src="js/levels/fase1/estrada.js"></script>
+<script src="js/levels/fase1/floresta.js"></script>
+<script src="js/levels/fase1/ruinas.js"></script>
+<script src="js/levels/fase1/caverna.js"></script>
+<script src="js/levels/fase1/santuario.js"></script>
+<script src="js/levels/fase1/memorias.js"></script>
+<script src="js/levels/fase1/cenas.js"></script>
+
+<!-- Jogo -->
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
