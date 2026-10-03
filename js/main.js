@@ -31,6 +31,7 @@
     if (dt > 0.25) dt = 0.25; // aba voltou do segundo plano
     acc += dt;
     let n = 0;
+    if (G.Online && G.Online.guest) { requestAnimationFrame(frame); return; }
     while (acc >= STEP && n < 5) {
       G.Input.update(STEP);
       game.update(STEP);

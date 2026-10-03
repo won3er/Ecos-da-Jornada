@@ -612,6 +612,8 @@
       return [
         { label: 'Novo jogo', fn: (g) => { if (this.hasSave) g.ui.confirm('Começar um novo jogo apaga o progresso salvo. Continuar?', (gg) => gg.newGame()); else g.newGame(); } },
         { label: 'Continuar', disabled: !this.hasSave, fn: (g) => g.continueGame() },
+        { label: 'Jogar online (convite)', fn: () => G.Online.openHost() },
+        { label: 'Restaurar save do casal', disabled: !(G.Online.restore && G.Online.restore()), fn: (g) => { G.Save.write(JSON.parse(G.Online.restore())); g.toTitle(); } },
         { label: 'Configurações', fn: (g) => g.ui.openSettings(g) },
         { label: 'Controles', fn: (g) => g.ui.openControls(g) },
         { label: 'Sair', fn: (g) => { try { window.close(); } catch (e) { /* */ } g.ui.message('Para sair, feche esta aba do navegador. Até a próxima jornada!'); } },

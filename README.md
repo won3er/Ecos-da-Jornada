@@ -320,3 +320,9 @@ G.dev.points(5)             // pontos de habilidade
 ```
 
 **F2** mostra as caixas de colisão e o FPS.
+
+## Jogar online com convite
+No menu inicial, **Jogar online (convite)** gera um link `?sala=CODIGO`. Quem recebe o link joga como Aldren direto no navegador (setas + 1/2/3/4, WASD/JKL ou gamepad). A conexão é P2P (WebRTC/PeerJS): o anfitrião roda o jogo e transmite vídeo/áudio. O save fica no navegador do anfitrião e é copiado para o da amiga a cada salvamento ("Restaurar save do casal" no menu permite ela virar anfitriã com o mesmo progresso). O código da sala é fixo por navegador, então o mesmo link volta a funcionar.
+
+## Deploy (Vercel)
+Site estático: importe o repositório na Vercel (Framework: Other, sem build).
