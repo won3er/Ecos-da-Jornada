@@ -350,8 +350,9 @@
         this.restrained = null; this.state = 'normal';
         return;
       }
-      // mantém o inimigo junto
-      e.x = U.lerp(e.x, this.x + this.fx * 12, 0.3); e.y = U.lerp(e.y, this.y + this.fy * 8, 0.3);
+      // mantém o inimigo junto (com colisão: nunca o empurra para dentro de paredes)
+      const tx = this.x + this.fx * 12, ty = this.y + this.fy * 8;
+      G.Physics.move(g, e, (tx - e.x) * 0.3, (ty - e.y) * 0.3);
     }
     onHurt(g) {
       if (this.state === 'restrain' && this.restrained) { this.restrained.held = false; this.restrained = null; this.state = 'normal'; }

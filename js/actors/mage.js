@@ -291,24 +291,21 @@
       const n = U.norm(mx, my);
       const dist = g.has('passo_etereo') ? 64 : 44;
       const from = { x: this.x, y: this.y };
-      // procura o ponto mais distante livre
+      // Varre o caminho e para no PRIMEIRO obstáculo: paredes, cercas, rochas,
+      // portões, barreiras, caixotes, água e abismos. O teleporte é curto e
+      // nunca atravessa nada sólido (antes dava para pular portões e chefes).
       let best = 0;
-      for (let d = 4; d <= dist; d += 4) {
-        const b = { x: this.x + n.x * d - this.w / 2, y: this.y + n.y * d - this.h, w: this.w, h: this.h };
-        const tx = Math.floor((this.x + n.x * d) / TS), ty = Math.floor((this.y + n.y * d - 2) / TS);
-        if (g.level.isHole(tx, ty)) break; // não salta abismos/água
-        if (G.Physics.blocked(g, b, this)) continue;
-        const pt = this.partner(g);
-        if (pt && (Math.abs(this.x + n.x * d - pt.x) > G.VIEW_W - 40 || Math.abs(this.y + n.y * d - pt.y) > G.VIEW_H - 56)) break;
+      const pt = this.partner(g);
+      for (let d = 2; d <= dist; d += 2) {
+        const nx = this.x + n.x * d, ny = this.y + n.y * d;
+        const b = { x: nx - this.w / 2, y: ny - this.h, w: this.w, h: this.h };
+        if (G.Physics.blocked(g, b, this)) break;
+        const tx = Math.floor(nx / TS), ty = Math.floor((ny - 2) / TS);
+        if (g.level.isHole(tx, ty)) break;
+        if (pt && !g.noTether && (Math.abs(nx - pt.x) > G.VIEW_W - 40 || Math.abs(ny - pt.y) > G.VIEW_H - 56)) break;
         best = d;
       }
-      if (best < 8) return;
-      // não atravessa paredes: checa linha
-      for (let d = 4; d < best; d += 4) {
-        const tx = Math.floor((this.x + n.x * d) / TS), ty = Math.floor((this.y + n.y * d - 2) / TS);
-        if (G.Tiles.def(g.level.tile(tx, ty)).tall) { best = d - 4; break; }
-      }
-      if (best < 8) return;
+      if (best < 8) { this.cooldowns.blink = 0.2; return; }
       this.x += n.x * best; this.y += n.y * best;
       this.setDir(n.x, n.y);
       this.state = 'dodge'; this.stateT = 0;

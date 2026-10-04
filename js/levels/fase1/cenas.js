@@ -45,7 +45,10 @@
     const golem = g.entities.find((e) => e.type === 'golem' && !e.dead);
     if (!golem || golem.state !== 'sleep') return;
     const gin = g.entities.find((e) => e.id === 'arena_in');
-    if (gin) gin.setOpen(false, g);
+    // quem entrou primeiro puxa o parceiro para dentro antes de a grade descer
+    const lead = g.players.filter((p) => p && !p.isDown).sort((a, b) => b.x - a.x)[0] || g.players[0];
+    g.regroup(lead);
+    if (gin) { gin.pushTo = { x: golem.x, y: golem.y }; gin.setOpen(false, g); }
     g.letterbox(true);
     G.Audio.playMusic(null, 1);
     yield g.camTo(golem.x, golem.y - 24, 3);
@@ -102,7 +105,9 @@
   G.Scenes.bossIntro = function* (g) {
     const boss = g.entities.find((e) => e.type === 'boss' && !e.dead);
     if (!boss || boss.state !== 'dormant') return;
-    for (const id of ['boss_g1', 'boss_g2']) { const gt = g.entities.find((e) => e.id === id); if (gt) gt.setOpen(false, g); }
+    const lead = g.players.filter((p) => p && !p.isDown).sort((a, b) => a.y - b.y)[0] || g.players[0];
+    g.regroup(lead);
+    for (const id of ['boss_g1', 'boss_g2']) { const gt = g.entities.find((e) => e.id === id); if (gt) { gt.pushTo = { x: boss.x, y: boss.y }; gt.setOpen(false, g); } }
     g.letterbox(true);
     G.Audio.playMusic(null, 1);
     yield g.camTo(boss.x, boss.y - 20, 2.5);

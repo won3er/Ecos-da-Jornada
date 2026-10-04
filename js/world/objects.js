@@ -274,6 +274,12 @@
     setOpen(v, g, silent) {
       if (this.open === v) return;
       this.open = v; this.solid = !v; this.blocksProjectiles = !v;
+      // ao fechar, ninguém fica preso dentro da grade
+      if (!v) {
+        g.solids = g.entities.filter((e) => !e.dead && (e.solid || e.blocksProjectiles));
+        if (!g.solids.includes(this)) g.solids.push(this);
+        for (const p of g.players) if (p && U.rectsOverlap(p.box, this.box)) g.unstick(p, this.pushTo || null);
+      }
       if (!silent) {
         G.Audio.sfx('gate');
         g.camera.shake(1.5, 0.3);

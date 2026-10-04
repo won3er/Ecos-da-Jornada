@@ -13,6 +13,7 @@
       this.wctx = this.world.getContext('2d');
       this.time = 0;
       this.settings = G.Save.loadSettings();
+      G.settings = this.settings; // usado pela câmera (tremor de tela)
       G.Input.solo = this.settings.solo;
       G.Audio.vol.music = this.settings.music; G.Audio.vol.sfx = this.settings.sfx;
       this.camera = new G.Camera();
@@ -229,7 +230,9 @@
       const Cls = G.EnemyTypes[type];
       if (!Cls) { console.warn('Inimigo desconhecido', type); return null; }
       const e = new Cls(Object.assign({ x, y }, o));
-      return this.addEntity(e);
+      this.addEntity(e);
+      if (this.level && !e.boss) this.unstick(e);
+      return e;
     }
     spawnDrop(x, y, kind, qty = 1) {
       const a = Math.random() * 6.28;
@@ -263,7 +266,7 @@
       this.particles.clear();
       this.bossBar = null; this.boss = null;
       this.tauntT = 0;
-      this.co.list = this.co.list.filter((c) => c.name === 'intro' || c.name === 'memory' || c.name === 'transition' || c.name === 'respawn' || c.name === 'golemDefeated' || c.name === 'bossDefeated' || c.name === 'afterMemory');
+      this.co.list = this.co.list.filter((c) => c.persist || c.name === 'intro' || c.name === 'memory' || c.name === 'transition' || c.name === 'respawn' || c.name === 'golemDefeated' || c.name === 'bossDefeated' || c.name === 'afterMemory');
       this.camera.setBounds(this.level.pw, this.level.ph);
       this.camera.focus = null;
       for (const tp of this.level.makeTileProps()) this.entities.push(tp);
@@ -299,8 +302,9 @@
       }
       this.players.forEach((p, i) => {
         if (!p) return;
-        p.state = p.state === 'down' ? 'normal' : 'normal';
-        p.stateT = 0; p.kvx = 0; p.kvy = 0; p.bubbleText = null;
+        p.state = 'normal';
+        if (p.hp <= 0) p.hp = Math.max(1, Math.round(p.maxHp * 0.3)); // nunca "vivo" com 0 de vida
+        p.stateT = 0; p.kvx = 0; p.kvy = 0; p.bubbleText = null; p.stuckT = 0;
         p.cancelActions(this);
         if (opts.positions) { p.x = opts.positions[i].x; p.y = opts.positions[i].y; p.dir = opts.positions[i].dir; }
         else {
@@ -320,12 +324,91 @@
       if (def.title && !opts.silent) G.HUD.showArea(def.title);
       if (def.onEnter) def.onEnter(this, spawn);
     }
-    unstick(p) {
-      if (!G.Physics.blocked(this, p.box, p)) return;
-      for (let r = 2; r < 40; r += 2) {
-        for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) {
-          const b = p.box; b.x += dx; b.y += dy;
-          if (!G.Physics.blocked(this, b, p)) { p.x += dx; p.y += dy; return; }
+    unstick(p, prefer) {
+      if (!G.Physics.blocked(this, p.box, p)) return false;
+      // procura o ponto livre mais próximo (de preferência do lado "prefer")
+      const dirs = [];
+      for (let r = 2; r < 64; r += 2) {
+        for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) dirs.push([dx, dy]);
+      }
+      if (prefer) {
+        // empurra para o lado indicado (ex.: para dentro da arena)
+        const near = dirs.filter(([dx, dy]) => Math.hypot(dx, dy) <= 40);
+        near.sort((a, b) => U.dist(p.x + a[0], p.y + a[1], prefer.x, prefer.y) - U.dist(p.x + b[0], p.y + b[1], prefer.x, prefer.y));
+        dirs.unshift(...near);
+      }
+      for (const [dx, dy] of dirs) {
+        const b = p.box; b.x += dx; b.y += dy;
+        if (G.Physics.blocked(this, b, p)) continue;
+        if (!p.flying && this.level.isHole(Math.floor((p.x + dx) / TS), Math.floor((p.y + dy - 2) / TS))) continue;
+        p.x += dx; p.y += dy;
+        return true;
+      }
+      return false;
+    }
+
+    // Um tile é transitável a pé? (tiles sólidos, água/abismo sem gelo/ponte e
+    // entidades sólidas como portões contam como bloqueio)
+    tilePassable(tx, ty) {
+      const lv = this.level;
+      if (lv.blocksAt(tx, ty, null)) return false;
+      const cx = tx * TS + 8, cy = ty * TS + 8;
+      for (const e of this.solids) {
+        if (e.dead || !e.solid) continue;
+        const b = e.box;
+        if (cx >= b.x && cx < b.x + b.w && cy >= b.y && cy < b.y + b.h) return false;
+        // entidades largas (portões 16x16) cobrem o tile inteiro
+        if (b.w >= 14 && b.h >= 12 && U.rectsOverlap({ x: tx * TS + 4, y: ty * TS + 4, w: 8, h: 8 }, b)) return false;
+      }
+      return true;
+    }
+    // Existe caminho a pé entre dois pontos (busca em largura limitada)?
+    reachable(ax, ay, bx, by, margin = 8) {
+      const sx = Math.floor(ax / TS), sy = Math.floor((ay - 3) / TS);
+      const ex = Math.floor(bx / TS), ey = Math.floor((by - 3) / TS);
+      if (sx === ex && sy === ey) return true;
+      const x0 = Math.min(sx, ex) - margin, x1 = Math.max(sx, ex) + margin;
+      const y0 = Math.min(sy, ey) - margin, y1 = Math.max(sy, ey) + margin;
+      const W2 = x1 - x0 + 1;
+      const seen = new Uint8Array(W2 * (y1 - y0 + 1));
+      const q = [[sx, sy]];
+      seen[(sy - y0) * W2 + (sx - x0)] = 1;
+      while (q.length) {
+        const [x, y] = q.shift();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < x0 || ny < y0 || nx > x1 || ny > y1) continue;
+          const k = (ny - y0) * W2 + (nx - x0);
+          if (seen[k]) continue;
+          seen[k] = 1;
+          if (nx === ex && ny === ey) return true;
+          if (!this.tilePassable(nx, ny)) continue;
+          q.push([nx, ny]);
+        }
+      }
+      return false;
+    }
+    // Junta a dupla: quem ficou para trás (do outro lado de um portão, longe
+    // demais) aparece ao lado de quem está à frente. Usado antes de fechar arenas.
+    regroup(leader, maxDist = 72) {
+      if (!leader) return;
+      this.solids = this.entities.filter((e) => !e.dead && (e.solid || e.blocksProjectiles));
+      for (const p of this.players) {
+        if (!p || p === leader) continue;
+        const near = U.dist(p.x, p.y, leader.x, leader.y) <= maxDist && this.reachable(p.x, p.y, leader.x, leader.y, 4);
+        if (near) continue;
+        const from = { x: p.x, y: p.y };
+        for (const [ox, oy] of [[0, 14], [-16, 6], [16, 6], [-16, -6], [16, -6], [0, -14], [-24, 12], [24, 12], [0, 24], [0, 0]]) {
+          const nx = leader.x + ox, ny = leader.y + oy;
+          const b = { x: nx - p.w / 2, y: ny - p.h, w: p.w, h: p.h };
+          if (G.Physics.blocked(this, b, p) || this.level.isHole(Math.floor(nx / TS), Math.floor((ny - 2) / TS))) continue;
+          if (!this.reachable(leader.x, leader.y, nx, ny, 3)) continue;
+          p.x = nx; p.y = ny; p.kvx = 0; p.kvy = 0;
+          if (p.state === 'down') p.revive(this, 0.3);
+          p.cancelActions(this); if (p.state !== 'normal') { p.state = 'normal'; p.stateT = 0; }
+          p.lastSafe = { x: p.x, y: p.y };
+          for (const q of [from, p]) this.particles.burst(q.x, q.y - 10, 14, { colors: ['#ffe8a0', '#ffffff'], speed: 40, life: 0.5, glow: true });
+          break;
         }
       }
     }
@@ -395,7 +478,7 @@
     onPlayerDown(p) {
       this.stats.downs++;
       const other = p.partner(this);
-      if (other && other.state === 'down') this.gameOver();
+      if (other && other.state === 'down' && !other.plumaPending) this.gameOver();
       else if (other) { this.bubble(other, p.kind === 'mage' ? 'Lirien! Aguenta firme!' : 'Aldren! Levanta!', 2); this.toast(`${p.name} caiu! Segure ${G.Characters[other.key].keys.act} perto para reviver.`, 3); }
     }
     onPlayerRevived(p) { this.stats.revives++; }
@@ -561,7 +644,7 @@
 
       // pausa
       if (G.Input.menu.pause && !this.ui.open && !this.dialogue.active && !this.transitioning && !this.co.blocking) { this.ui.openPause(this); return; }
-      if (G.Input.menu.soloSwap && G.Input.solo && !this.ui.open) { G.Input.soloActive = 1 - G.Input.soloActive; G.Audio.sfx('ui'); }
+      if (G.Input.menu.soloSwap && G.Input.solo && !this.ui.open && !this.co.blocking) { const prev = G.Input.soloActive; G.Input.soloActive = 1 - prev; this.ai.onSwap(this, prev); G.Audio.sfx('ui'); }
       if (this.ui.open) { this.ui.update(dt, this); return; }
 
       this.playTime += dt;
@@ -631,9 +714,22 @@
         const inside = ps.filter((p) => U.pointInRect(p.x, p.y - 2, ex));
         if (!inside.length) continue;
         const other = this.players.find((p) => !inside.includes(p));
-        if (other && U.dist(other.x, other.y, ex.x + 8, ex.y + 8) > 90) {
-          if (!this._waitMsgT || this.time - this._waitMsgT > 3) { this._waitMsgT = this.time; this.bubble(inside[0], 'Vem comigo!', 1.5); }
-          continue;
+        if (other) {
+          // o parceiro precisa estar perto E do mesmo lado (sem portão/parede no meio)
+          let ok = !other.isDown && U.dist(other.x, other.y, inside[0].x, inside[0].y) <= 90;
+          if (ok) {
+            if (!this._reachCache || this.time - this._reachCache.t > 0.25) {
+              this._reachCache = { t: this.time, v: this.reachable(other.x, other.y, inside[0].x, inside[0].y, 6) };
+            }
+            ok = this._reachCache.v;
+          }
+          if (!ok) {
+            if (!this._waitMsgT || this.time - this._waitMsgT > 3) {
+              this._waitMsgT = this.time;
+              this.bubble(inside[0], other.isDown ? 'Não vou sem você! Levanta!' : 'Vem comigo!', 1.6);
+            }
+            continue;
+          }
         }
         this.changeArea(ex.to, ex.spawn);
         return;

@@ -21,7 +21,7 @@
     constructor() { this.list = []; }
     start(genFn, game, opts = {}) {
       const it = genFn(game);
-      const co = { it, waiter: null, done: false, blocking: opts.blocking !== false, name: opts.name || '' };
+      const co = { it, waiter: null, done: false, blocking: opts.blocking !== false, name: opts.name || '', persist: !!opts.persist };
       this.list.push(co);
       this.step(co, game);
       return co;

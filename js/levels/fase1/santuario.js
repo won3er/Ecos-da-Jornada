@@ -111,7 +111,7 @@ G.defineArea({
   spawnOffset: [[-4, 0], [12, 0]],
   spawnDir: 'up',
   exits: [{ x: 15, y: 23, w: 2, to: 'santuario', spawn: 'norte' }],
-  zones: [{ x: 10, y: 16, w: 12, h: 1, trigger: 'bossStart' }],
+  zones: [{ x: 1, y: 2, w: 30, h: 16, trigger: 'bossStart' }], // toda a cratera acima da entrada
   entities: [
     { enemy: 'boss', tx: 16, ty: 9, flag: 'boss_dead' },
     { type: 'light', tx: 16, ty: 11, r: 190, a: 0.45, color: '#7a6ad8' },

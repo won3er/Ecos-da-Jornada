@@ -98,6 +98,13 @@
       if (this.state === 'down') { this.updateDown(dt, g); return; }
       if (this.state === 'fall') { this.updateFall(dt, g); return; }
 
+      // vigia anti-travamento: se algo sólido "nasceu" em cima do personagem
+      // (portão fechando, caixote, cena), ele é empurrado para o espaço livre
+      if (!g.co.blocking && !this.carried && G.Physics.blocked(g, this.box, this)) {
+        this.stuckT = (this.stuckT || 0) + dt;
+        if (this.stuckT > 0.15) { g.unstick(this); this.stuckT = 0; }
+      } else this.stuckT = 0;
+
       // regeneração
       this.regen(dt, g);
 
@@ -194,16 +201,21 @@
       this.reviveP = 0;
       G.Audio.sfx('down');
       g.camera.shake(3, 0.3);
-      g.onPlayerDown(this);
-      // Pluma da Fênix
+      // Pluma da Fênix: revive sozinho (e conta como "de pé" para o game over)
       if (g.inv.count('pluma') > 0) {
         g.inv.remove('pluma', 1);
+        this.plumaPending = true;
+        g.stats.downs++;
         g.co.start(function* () {
           yield G.Co.wait(0.8);
+          this.plumaPending = false;
+          if (this.state !== 'down') return;
           g.toast('A Pluma da Fênix brilhou!', 2.5);
           this.revive(g, 0.5);
-        }.bind(this), g, { blocking: false });
+        }.bind(this), g, { blocking: false, name: 'pluma' });
+        return;
       }
+      g.onPlayerDown(this);
     }
     updateDown(dt, g) {
       const pt = this.partner(g);
