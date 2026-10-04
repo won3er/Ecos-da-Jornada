@@ -18,8 +18,10 @@
 
     openPause(g) { this.push(new PauseMenu()); G.Audio.sfx('ui'); }
     openSkills(g, fromStone) { this.push(new SkillsMenu(fromStone)); }
-    openShop(g) { this.push(new ShopMenu()); }
-    openSmith(g) { this.push(new SmithMenu()); }
+    openShop(g, stock, title) { this.push(new ShopMenu(stock, title)); }
+    openSmith(g, title) { this.push(new SmithMenu(title)); }
+    openWaystone(g, stone) { this.push(new WaystoneMenu(stone)); }
+    openTravel(g) { this.push(new TravelMenu()); }
     openInventory(g) { this.push(new InventoryMenu()); }
     openJournal(g) { this.push(new JournalMenu()); }
     openSettings(g) { this.push(new SettingsMenu()); }
@@ -194,7 +196,7 @@
       this.sel = nav(this.sel, list.length);
       if (M().confirm) {
         const sk = list[this.sel];
-        if (g.prog.learn(keys[this.col], sk)) {
+        if (g.prog.learn(keys[this.col], sk, g)) {
           G.Audio.sfx('levelup');
           g.refreshStats();
           g.particles.burst(g.players[this.col].x, g.players[this.col].y - 12, 20, { colors: ['#f2d98c', '#ffffff'], speed: 50, life: 0.8, glow: true });
@@ -203,60 +205,139 @@
     }
     draw(ctx, g) {
       dim(ctx, 0.6);
-      const x = 24, y = 18, w = W() - 48, h = H() - 36;
+      const x = 18, y = 8, w = W() - 36, h = H() - 16;
       UI().panel(ctx, x, y, w, h);
-      UI().title(ctx, this.fromStone ? 'MEDITAÇÃO — HABILIDADES' : 'HABILIDADES', W() / 2, y + 8);
-      F().draw(ctx, 'Pontos de Lembrança: ' + g.prog.points, W() / 2, y + 22, g.prog.points ? '#8ae8ff' : '#8a84a8', { align: 'center', shadow: true });
+      UI().title(ctx, this.fromStone ? 'MEDITAÇÃO — HABILIDADES' : 'HABILIDADES', W() / 2, y + 7);
+      F().draw(ctx, 'Pontos de Lembrança: ' + g.prog.points, W() / 2, y + 20, g.prog.points ? '#8ae8ff' : '#8a84a8', { align: 'center', shadow: true });
       const keys = ['lirien', 'aldren'];
+      const ROMAN = ['', 'I', 'II', 'III'];
       keys.forEach((k, c) => {
-        const cx = x + 10 + c * (w / 2 - 4);
-        const cw = w / 2 - 16;
-        F().draw(ctx, G.Characters[k].name, cx + 4, y + 38, G.Characters[k].color, { shadow: true });
+        const cx = x + 8 + c * (w / 2 - 2);
+        const cw = w / 2 - 12;
+        F().draw(ctx, G.Characters[k].name, cx + 4, y + 32, G.Characters[k].color, { shadow: true });
         G.Skills[k].forEach((sk, i) => {
-          const yy = y + 52 + i * 18;
+          const yy = y + 45 + i * 14;
           const learned = g.prog.has(sk.id);
-          const can = g.prog.canLearn(k, sk);
+          const can = g.prog.canLearn(k, sk, g);
+          const locked = sk.ch && g.chapter < sk.ch;
           const selected = c === this.col && i === this.sel;
-          ctx.fillStyle = selected ? UI().COL.sel : 'rgba(255,255,255,0.03)'; ctx.fillRect(cx, yy - 3, cw, 16);
-          if (selected) UI().frame(ctx, cx, yy - 3, cw, 16, '#d9b45a');
-          G.Icons.draw(ctx, sk.icon, cx + 4, yy - 1);
-          F().draw(ctx, sk.name, cx + 18, yy + 1, learned ? '#7aff8a' : '#ece6f6', { shadow: true });
-          F().draw(ctx, learned ? 'Aprendida' : sk.cost + ' pt' + (sk.cost > 1 ? 's' : ''), cx + cw - 4, yy + 1, learned ? '#7aff8a' : can ? '#8ae8ff' : '#6a6480', { align: 'right' });
+          ctx.fillStyle = selected ? UI().COL.sel : 'rgba(255,255,255,0.03)'; ctx.fillRect(cx, yy - 3, cw, 13);
+          if (selected) UI().frame(ctx, cx, yy - 3, cw, 13, '#d9b45a');
+          ctx.globalAlpha = locked ? 0.45 : 1;
+          G.Icons.draw(ctx, sk.icon, cx + 3, yy - 2);
+          F().draw(ctx, locked ? '???' : sk.name, cx + 16, yy, learned ? '#7aff8a' : '#ece6f6', { shadow: true });
+          ctx.globalAlpha = 1;
+          F().draw(ctx, learned ? 'Aprendida' : locked ? 'Cap. ' + ROMAN[sk.ch] : sk.cost + ' pt' + (sk.cost > 1 ? 's' : ''), cx + cw - 4, yy, learned ? '#7aff8a' : can ? '#8ae8ff' : '#6a6480', { align: 'right' });
         });
       });
-      // descrição da habilidade selecionada
-      const sk = G.Skills[keys[this.col]][this.sel];
-      const dy = y + 52 + 5 * 18 + 6;
-      ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(x + 10, dy, w - 20, 34);
-      F().draw(ctx, sk.name, x + 16, dy + 4, '#f2d98c', { shadow: true });
-      F().drawWrapped(ctx, sk.desc, x + 16, dy + 17, w - 40, '#c8c0d8', { shadow: true });
+      const list = G.Skills[keys[this.col]];
+      const sk = list[this.sel];
+      const dy = y + 45 + list.length * 14 + 1;
+      ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(x + 8, dy, w - 16, 28);
+      const locked = sk.ch && g.chapter < sk.ch;
+      F().draw(ctx, locked ? 'Habilidade selada' : sk.name, x + 14, dy + 3, '#f2d98c', { shadow: true });
+      F().drawWrapped(ctx, locked ? 'Desperta no Capítulo ' + ROMAN[sk.ch] + '.' : sk.desc, x + 14, dy + 15, w - 40, '#c8c0d8', { shadow: true });
       if (sk.req && !g.prog.has(sk.req) && !g.prog.has(sk.id)) {
-        const req = G.Skills[keys[this.col]].find((s2) => s2.id === sk.req);
-        F().draw(ctx, 'Requer: ' + req.name, x + w - 16, dy + 4, '#c86a7a', { align: 'right', shadow: true });
+        const req = list.find((s2) => s2.id === sk.req);
+        F().draw(ctx, 'Requer: ' + req.name, x + w - 14, dy + 3, '#c86a7a', { align: 'right', shadow: true });
       }
-      // habilidades especiais desbloqueadas pela história
       const extra = [];
-      if (g.unlockedSpells.includes('bridge')) extra.push('Lirien: Ponte Etérea');
-      if (g.has('reflexao')) extra.push('Aldren: Reflexão (aparar devolve projéteis)');
-      F().draw(ctx, extra.length ? 'Da história: ' + extra.join(' • ') : 'Ganhe pontos em memórias, missões e chefes.', W() / 2, y + h - 14, '#8a84a8', { align: 'center', shadow: true });
+      if (g.unlockedSpells.includes('bridge')) extra.push('Ponte');
+      if (g.unlockedSpells.includes('fire')) extra.push('Chama');
+      if (g.unlockedSpells.includes('stasis')) extra.push('Estase');
+      if (g.has('reflexao')) extra.push('Reflexão');
+      if (g.has('arremesso')) extra.push('Arremesso');
+      if (g.has('salto')) extra.push('Salto');
+      F().draw(ctx, extra.length ? 'Da história: ' + extra.join(' • ') : 'Ganhe pontos em memórias, missões e chefes.', W() / 2, y + h - 12, '#8a84a8', { align: 'center', shadow: true });
     }
   }
 
-  // ================================================================ Diário (missões, memórias, colecionáveis)
-  class JournalMenu {
-    constructor() { this.tab = 0; this.sel = 0; }
+  // ================================================================ Pedra de Retorno (meditar / viajar)
+  class WaystoneMenu {
+    constructor(stone) { this.stone = stone; this.sel = 0; }
+    opts(g) {
+      const canTravel = !g.inMemory && !g.bossBar && Object.keys(g.waystones).length > 1;
+      return [
+        { label: 'Meditar (habilidades)', fn: () => { g.ui.pop(); g.ui.openSkills(g, true); } },
+        { label: 'Viajar para outra Pedra', disabled: !canTravel, fn: () => { g.ui.pop(); g.ui.openTravel(g); } },
+        { label: 'Descansar e sair', fn: () => g.ui.pop() },
+      ];
+    }
     update(dt, g) {
-      if (M().left) { this.tab = (this.tab + 2) % 3; this.sel = 0; G.Audio.sfx('ui'); }
-      if (M().right) { this.tab = (this.tab + 1) % 3; this.sel = 0; G.Audio.sfx('ui'); }
+      const o = this.opts(g);
+      this.sel = nav(this.sel, o.length);
+      if (M().confirm) {
+        const it = o[this.sel];
+        if (it.disabled) { G.Audio.sfx('immune'); g.toast(Object.keys(g.waystones).length > 1 ? 'Não dá para viajar agora.' : 'Ative outras Pedras de Retorno para viajar entre elas.'); return; }
+        G.Audio.sfx('uiOk'); it.fn();
+      } else if (back()) g.ui.pop();
+    }
+    draw(ctx, g) {
+      dim(ctx, 0.5);
+      const w = 200, h = 78, x = (W() - w) / 2, y = (H() - h) / 2;
+      UI().panel(ctx, x, y, w, h);
+      UI().title(ctx, 'PEDRA DE RETORNO', W() / 2, y + 8);
+      UI().options(ctx, this.opts(g), this.sel, W() / 2, y + 26, g, { center: true, w: 180 });
+      F().draw(ctx, 'Progresso salvo. Vida e mana restauradas.', W() / 2, y + h + 4, '#8a84a8', { align: 'center', shadow: true });
+    }
+  }
+  class TravelMenu {
+    constructor() { this.sel = 0; this.scroll = 0; }
+    list(g) {
+      return Object.entries(g.waystones).map(([id, e]) => Object.assign({ id }, e)).sort((a, b) => (a.ch - b.ch) || (a.order - b.order));
+    }
+    update(dt, g) {
+      const l = this.list(g);
+      const n = l.length + 1;
+      this.sel = nav(this.sel, n);
+      if (this.sel - this.scroll > 8) this.scroll = this.sel - 8;
+      if (this.sel < this.scroll) this.scroll = this.sel;
+      if (M().confirm) {
+        if (this.sel === l.length) { g.ui.pop(); return; }
+        const e = l[this.sel];
+        const here = g.checkpoint && g.checkpoint.id === e.id;
+        if (here) { G.Audio.sfx('immune'); g.toast('Vocês já estão aqui.'); return; }
+        G.Audio.sfx('checkpoint');
+        g.ui.clear();
+        g.changeArea(e.area, null, { pos: { x: e.x, y: e.y } });
+      } else if (back()) g.ui.pop();
+    }
+    draw(ctx, g) {
+      dim(ctx, 0.6);
+      const w = 260, h = 174, x = (W() - w) / 2, y = (H() - h) / 2;
+      UI().panel(ctx, x, y, w, h);
+      UI().title(ctx, 'VIAGEM RÁPIDA', W() / 2, y + 8);
+      const l = this.list(g);
+      const ROMAN = ['', 'I', 'II', 'III', 'III'];
+      const rows = l.map((e) => ({ label: e.name, ch: e.ch, id: e.id })).concat([{ label: 'Voltar' }]);
+      rows.slice(this.scroll, this.scroll + 9).forEach((r, k) => {
+        const i = k + this.scroll, yy = y + 26 + k * 15;
+        if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 14); }
+        const here = g.checkpoint && g.checkpoint.id === r.id;
+        F().draw(ctx, r.label + (here ? '  (aqui)' : ''), x + 16, yy, i === this.sel ? '#fff' : here ? '#8a84a8' : '#ece6f6', { shadow: true });
+        if (r.ch) F().draw(ctx, 'Cap. ' + ROMAN[r.ch], x + w - 16, yy, '#8a84a8', { align: 'right' });
+      });
+    }
+  }
+
+  // ================================================================ Diário (missões, memórias, bestiário, conclusão)
+  class JournalMenu {
+    constructor() { this.tab = 0; this.sel = 0; this.scroll = 0; }
+    update(dt, g) {
+      const NT = 4;
+      if (M().left) { this.tab = (this.tab + NT - 1) % NT; this.sel = 0; this.scroll = 0; G.Audio.sfx('ui'); }
+      if (M().right) { this.tab = (this.tab + 1) % NT; this.sel = 0; this.scroll = 0; G.Audio.sfx('ui'); }
+      if (this.tab === 0) { if (M().down) this.scroll++; if (M().up) this.scroll = Math.max(0, this.scroll - 1); }
       if (this.tab === 1) this.sel = nav(this.sel, Object.keys(G.MemoryDefs).length);
+      if (this.tab === 2) this.sel = nav(this.sel, Object.keys(G.BestiaryInfo).length);
       if (back() || M().confirm) g.ui.pop();
     }
     draw(ctx, g) {
       dim(ctx, 0.6);
-      const x = 30, y = 20, w = W() - 60, h = H() - 40;
+      const x = 22, y = 14, w = W() - 44, h = H() - 28;
       UI().panel(ctx, x, y, w, h);
       UI().title(ctx, 'DIÁRIO', W() / 2, y + 8);
-      const tabs = ['Missões', 'Memórias', 'Descobertas'];
+      const tabs = ['Missões', 'Memórias', 'Bestiário', 'Conclusão'];
       let tx = x + 10;
       tabs.forEach((name, i) => {
         const tw = F().measure(name) + 10;
@@ -264,47 +345,69 @@
         F().draw(ctx, name, tx + 3, y + 25, i === this.tab ? '#fff' : '#8a84a8', { shadow: true });
         tx += tw + 4;
       });
+      F().draw(ctx, '◀ ▶', x + w - 10, y + 25, '#5a5470', { align: 'right' });
       const ly = y + 44;
+      ctx.save(); ctx.beginPath(); ctx.rect(x + 2, ly - 4, w - 4, h - 48); ctx.clip();
       if (this.tab === 0) {
-        let yy = ly;
-        for (const id in G.Quests) {
-          const q = G.Quests[id]; const s = g.questState(id);
-          if (s === 'inactive') continue;
-          const col = s === 'done' ? '#7aff8a' : '#f2d98c';
-          F().draw(ctx, (s === 'done' ? '✓ ' : '◆ ') + q.title, x + 12, yy, col, { shadow: true });
+        let yy = ly - this.scroll * 12;
+        const ids = Object.keys(G.Quests).filter((id) => g.questState(id) !== 'inactive');
+        ids.sort((a, b) => (g.questState(a) === 'done') - (g.questState(b) === 'done'));
+        for (const id of ids) {
+          const q = G.Quests[id]; const s2 = g.questState(id);
+          const col = s2 === 'done' ? '#7aff8a' : '#f2d98c';
+          F().draw(ctx, (s2 === 'done' ? '✓ ' : '◆ ') + q.title, x + 12, yy, col, { shadow: true });
           yy += 12;
-          yy += F().drawWrapped(ctx, s === 'done' ? 'Concluída.' : q.desc + ' — ' + q.objective(g), x + 22, yy, w - 40, '#c8c0d8', { shadow: true, lineHeight: 11 }) * 11 + 6;
+          yy += F().drawWrapped(ctx, s2 === 'done' ? 'Concluída.' : q.desc + ' — ' + q.objective(g), x + 22, yy, w - 40, '#c8c0d8', { shadow: true, lineHeight: 11 }) * 11 + 5;
         }
-        if (yy === ly) F().draw(ctx, 'Nenhuma missão. Converse com o pessoal da vila.', x + 12, yy, '#6a6480', { shadow: true });
+        if (!ids.length) F().draw(ctx, 'Nenhuma missão. Converse com as pessoas pelo caminho.', x + 12, yy, '#6a6480', { shadow: true });
+        else if (yy > y + h) F().draw(ctx, '▼', x + w - 14, y + h - 16, '#8a84a8');
       } else if (this.tab === 1) {
         const ids = Object.keys(G.MemoryDefs);
-        ids.forEach((id, i) => {
+        const top = Math.max(0, Math.min(this.sel - 6, ids.length - 13));
+        ids.slice(top, top + 13).forEach((id, k) => {
+          const i = k + top;
           const seen = g.memories.has(id);
-          const yy = ly + i * 14;
-          if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, 150, 13); }
+          const yy = ly + k * 13;
+          if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, 150, 12); }
           F().draw(ctx, seen ? G.MemoryDefs[id].title : '???', x + 14, yy, seen ? '#f2d98c' : '#5a5470', { shadow: true });
         });
         const id = ids[this.sel], md = G.MemoryDefs[id];
-        const dx = x + 170;
+        const dx = x + 168;
         if (g.memories.has(id)) {
           F().draw(ctx, md.when, dx, ly, '#8a84a8', { shadow: true });
-          F().drawWrapped(ctx, md.journal, dx, ly + 14, w - 190, '#ece6f6', { shadow: true, lineHeight: 12 });
-        } else F().drawWrapped(ctx, 'Uma lembrança ainda não despertada. Procure objetos que brilham com luz dourada.', dx, ly, w - 190, '#6a6480', { shadow: true, lineHeight: 12 });
-      } else {
-        const rows = [
-          ['Páginas do Grimório', `${g.inv.count('pagina') + (g.inv.has('grimorio') ? 5 : 0)}/5`],
-          ['Memórias', `${g.memories.size}/${Object.keys(G.MemoryDefs).length}`],
-          ['Segredos encontrados', `${g.secretsFound()}/${G.TOTAL_SECRETS || 6}`],
-          ['Combos realizados', String(g.stats.combos || 0)],
-          ['Inimigos derrotados', String(g.stats.kills || 0)],
-          ['Quedas', String(g.stats.downs || 0)],
-          ['Tempo de jogo', U.formatTime(g.playTime)],
-        ];
-        rows.forEach(([a, b], i) => {
-          F().draw(ctx, a, x + 20, ly + i * 15, '#c8c0d8', { shadow: true });
-          F().draw(ctx, b, x + w - 20, ly + i * 15, '#f2d98c', { align: 'right', shadow: true });
+          F().drawWrapped(ctx, md.journal, dx, ly + 14, w - 186, '#ece6f6', { shadow: true, lineHeight: 12 });
+        } else F().drawWrapped(ctx, 'Uma lembrança ainda não despertada. Procure objetos que brilham com luz dourada.', dx, ly, w - 186, '#6a6480', { shadow: true, lineHeight: 12 });
+      } else if (this.tab === 2) {
+        const ids = Object.keys(G.BestiaryInfo);
+        const top = Math.max(0, Math.min(this.sel - 6, ids.length - 13));
+        ids.slice(top, top + 13).forEach((id, k) => {
+          const i = k + top;
+          const n = g.bestiary[id] || 0;
+          const yy = ly + k * 13;
+          if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, 160, 12); }
+          F().draw(ctx, n ? G.BestiaryInfo[id].name : '???', x + 14, yy, n ? '#ece6f6' : '#5a5470', { shadow: true });
+          if (n) F().draw(ctx, String(n), x + 164, yy, '#8a84a8', { align: 'right' });
         });
+        const b = G.BestiaryInfo[ids[this.sel]];
+        const dx = x + 178;
+        if (g.bestiary[ids[this.sel]]) {
+          F().draw(ctx, b.name, dx, ly, '#f2d98c', { shadow: true });
+          const n2 = F().drawWrapped(ctx, b.desc, dx, ly + 14, w - 196, '#ece6f6', { shadow: true, lineHeight: 12 });
+          F().draw(ctx, 'Juntos:', dx, ly + 20 + n2 * 12, '#8ae8ff', { shadow: true });
+          F().drawWrapped(ctx, b.tip, dx, ly + 32 + n2 * 12, w - 196, '#c8c0d8', { shadow: true, lineHeight: 12 });
+        } else F().drawWrapped(ctx, 'Derrote esta criatura para registrá-la.', dx, ly, w - 196, '#6a6480', { shadow: true, lineHeight: 12 });
+      } else {
+        const c = G.completion(g);
+        c.rows.forEach(([a, b, t], i) => {
+          F().draw(ctx, a, x + 20, ly + i * 13, '#c8c0d8', { shadow: true });
+          F().draw(ctx, b + '/' + t, x + w - 20, ly + i * 13, b >= t ? '#7aff8a' : '#f2d98c', { align: 'right', shadow: true });
+        });
+        const yy = ly + c.rows.length * 13 + 4;
+        F().draw(ctx, 'Combos: ' + (g.stats.combos || 0) + '   Inimigos: ' + (g.stats.kills || 0) + '   Revives: ' + (g.stats.revives || 0) + '   Tempo: ' + U.formatTime(g.playTime), W() / 2, yy, '#8a84a8', { align: 'center', shadow: true });
+        F().draw(ctx, 'JORNADA ' + c.pct + '%', W() / 2, yy + 14, c.pct >= 100 ? '#7aff8a' : '#f2d98c', { align: 'center', shadow: true, scale: 1 });
+        UI().bar(ctx, W() / 2 - 80, yy + 28, 160, 4, c.pct / 100, '#f2d98c', '#2a2416');
       }
+      ctx.restore();
     }
   }
 
@@ -391,14 +494,20 @@
   }
 
   // ================================================================ Loja
+  G.ShopStock = {
+    tobin: (g) => g.chapter >= 2 ? ['pocao', 'pocao_grande', 'eter', 'tonico', 'pluma', 'anel_foco', 'luvas_ferro'] : ['pocao', 'eter', 'pluma', 'anel_foco'],
+    yara: (g) => ['pocao', 'pocao_grande', 'eter', 'elixir', 'pluma', 'botas_cravo', 'luvas_ferro'],
+    cassio: (g) => ['pocao_grande', 'elixir', 'eter', 'tonico', 'pluma', 'colar_aurora'],
+  };
   class ShopMenu {
-    constructor() { this.sel = 0; this.stock = ['pocao', 'eter', 'pluma', 'anel_foco']; }
+    constructor(stock, title) { this.sel = 0; this.stockFn = stock || G.ShopStock.tobin; this.title = title || 'TENDA DO TOBIN'; }
     update(dt, g) {
-      const n = this.stock.length + 1;
+      const stock = this.stockFn(g);
+      const n = stock.length + 1;
       this.sel = nav(this.sel, n);
       if (M().confirm) {
-        if (this.sel === this.stock.length) { g.ui.pop(); return; }
-        const id = this.stock[this.sel], it = G.Items[id];
+        if (this.sel === stock.length) { g.ui.pop(); return; }
+        const id = stock[this.sel], it = G.Items[id];
         const unique = it.cat === 'equipamento';
         if (unique && g.inv.has(id)) { G.Audio.sfx('immune'); g.toast('Vocês já têm este item.'); return; }
         if (g.gold >= it.price) { g.gold -= it.price; g.inv.add(id, 1, g); G.Audio.sfx('coin'); }
@@ -407,35 +516,42 @@
     }
     draw(ctx, g) {
       dim(ctx, 0.5);
-      const w = 300, h = 140, x = (W() - w) / 2, y = 30;
+      const stock = this.stockFn(g);
+      const w = 300, h = 46 + (stock.length + 1) * 15, x = (W() - w) / 2, y = 20;
       UI().panel(ctx, x, y, w, h);
-      UI().title(ctx, 'TENDA DO TOBIN', W() / 2, y + 8);
+      UI().title(ctx, this.title, W() / 2, y + 8);
       G.Icons.draw(ctx, 'coin', x + w - 50, y + 22); F().draw(ctx, String(g.gold), x + w - 12, y + 24, '#ffe680', { align: 'right', shadow: true });
-      this.stock.forEach((id, i) => {
-        const it = G.Items[id], yy = y + 40 + i * 16;
+      stock.forEach((id, i) => {
+        const it = G.Items[id], yy = y + 38 + i * 15;
         if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 14); }
         G.Icons.draw(ctx, it.icon, x + 12, yy - 1);
-        F().draw(ctx, it.name, x + 26, yy, g.gold >= it.price ? '#ece6f6' : '#6a6480', { shadow: true });
-        F().draw(ctx, 'tem ' + g.inv.count(id), x + 200, yy, '#8a84a8', { align: 'right' });
+        const owned = it.cat === 'equipamento' && g.inv.has(id);
+        F().draw(ctx, it.name, x + 26, yy, owned ? '#7aff8a' : g.gold >= it.price ? '#ece6f6' : '#6a6480', { shadow: true });
+        F().draw(ctx, owned ? 'comprado' : 'tem ' + g.inv.count(id), x + 210, yy, '#8a84a8', { align: 'right' });
         F().draw(ctx, it.price + ' moedas', x + w - 14, yy, '#ffe680', { align: 'right', shadow: true });
       });
-      const yy = y + 40 + this.stock.length * 16;
-      if (this.sel === this.stock.length) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 14); }
+      const yy = y + 38 + stock.length * 15;
+      if (this.sel === stock.length) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 14); }
       F().draw(ctx, 'Sair', x + 26, yy, '#ece6f6', { shadow: true });
-      const it = G.Items[this.stock[this.sel]];
+      const it = G.Items[stock[this.sel]];
       if (it) { UI().panel(ctx, x, y + h + 4, w, 32); F().drawWrapped(ctx, it.desc, x + 10, y + h + 12, w - 20, '#c8c0d8', { shadow: true, lineHeight: 11 }); }
     }
   }
 
-  // ================================================================ Ferreiro
+  // ================================================================ Ferreiro (até o nível 5)
+  const SMITH_COST = [
+    { gold: 50 },
+    { gold: 100, mat: 'minerio', n: 1 },
+    { gold: 200, mat: 'cristal_gelido', n: 2 },
+    { gold: 350, mat: 'nucleo_estelar', n: 1 },
+  ];
   class SmithMenu {
-    constructor() { this.sel = 0; }
+    constructor(title) { this.sel = 0; this.title = title || 'FORJA DA BRUNNA'; }
     offers(g) {
       const w = g.inv.weapon;
-      const cost = (lvl) => (lvl === 0 ? { gold: 50, ore: 0 } : lvl === 1 ? { gold: 100, ore: 1 } : null);
       return [
-        { key: 'sword', label: 'Afiar a espada do Aldren', lvl: w.sword, cost: cost(w.sword), eff: '+3 de dano físico' },
-        { key: 'staff', label: 'Reforçar o cajado da Lirien', lvl: w.staff, cost: cost(w.staff), eff: '+2 de dano mágico' },
+        { key: 'sword', label: 'Afiar a espada do Aldren', lvl: w.sword, cost: SMITH_COST[w.sword] || null, eff: '+3 de dano físico' },
+        { key: 'staff', label: 'Reforçar o cajado da Lirien', lvl: w.staff, cost: SMITH_COST[w.staff] || null, eff: '+2 de dano mágico' },
       ];
     }
     update(dt, g) {
@@ -444,9 +560,10 @@
       if (M().confirm) {
         if (this.sel === o.length) { g.ui.pop(); return; }
         const of = o[this.sel];
-        if (!of.cost) { G.Audio.sfx('immune'); g.toast('Já está no nível máximo por enquanto.'); return; }
-        if (g.gold < of.cost.gold || g.inv.count('minerio') < of.cost.ore) { G.Audio.sfx('immune'); g.toast(of.cost.ore ? 'Precisa de moedas e Minério Estelar.' : 'Moedas insuficientes.'); return; }
-        g.gold -= of.cost.gold; if (of.cost.ore) g.inv.remove('minerio', of.cost.ore);
+        if (!of.cost) { G.Audio.sfx('immune'); g.toast('Já está no nível máximo. Não existe metal melhor!'); return; }
+        const c = of.cost;
+        if (g.gold < c.gold || (c.mat && g.inv.count(c.mat) < c.n)) { G.Audio.sfx('immune'); g.toast(c.mat ? 'Precisa de ' + c.gold + ' moedas e ' + c.n + 'x ' + G.Items[c.mat].name + '.' : 'Moedas insuficientes.'); return; }
+        g.gold -= c.gold; if (c.mat) g.inv.remove(c.mat, c.n);
         g.inv.weapon[of.key]++;
         g.refreshStats();
         G.Audio.sfx('heavyHit'); G.Audio.sfx('levelup');
@@ -456,21 +573,26 @@
     }
     draw(ctx, g) {
       dim(ctx, 0.5);
-      const w = 320, h = 120, x = (W() - w) / 2, y = 40;
+      const w = 340, h = 124, x = (W() - w) / 2, y = 40;
       UI().panel(ctx, x, y, w, h);
-      UI().title(ctx, 'FORJA DA BRUNNA', W() / 2, y + 8);
-      G.Icons.draw(ctx, 'coin', x + w - 90, y + 22); F().draw(ctx, String(g.gold), x + w - 56, y + 24, '#ffe680', { align: 'right', shadow: true });
-      G.Icons.draw(ctx, 'ore', x + w - 46, y + 22); F().draw(ctx, String(g.inv.count('minerio')), x + w - 12, y + 24, '#c8c8ff', { align: 'right', shadow: true });
+      UI().title(ctx, this.title, W() / 2, y + 8);
+      let ix = x + w - 12;
+      for (const [ic, n] of [['core', g.inv.count('nucleo_estelar')], ['icecrystal', g.inv.count('cristal_gelido')], ['ore', g.inv.count('minerio')], ['coin', g.gold]]) {
+        const tw = F().measure(String(n));
+        F().draw(ctx, String(n), ix, y + 24, ic === 'coin' ? '#ffe680' : '#c8c8ff', { align: 'right', shadow: true });
+        G.Icons.draw(ctx, ic, ix - tw - 12, y + 22);
+        ix -= tw + 18;
+      }
       const o = this.offers(g);
       o.forEach((of, i) => {
-        const yy = y + 42 + i * 24;
-        if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 22); }
+        const yy = y + 42 + i * 26;
+        if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 24); }
         G.Icons.draw(ctx, of.key === 'sword' ? 'sword' : 'staff', x + 12, yy);
-        F().draw(ctx, of.label + '  (Nv ' + (of.lvl + 1) + ')', x + 26, yy, '#ece6f6', { shadow: true });
-        F().draw(ctx, of.cost ? of.eff : 'Nível máximo nesta fase', x + 26, yy + 10, '#8a84a8');
-        if (of.cost) F().draw(ctx, of.cost.gold + ' moedas' + (of.cost.ore ? ' + 1 minério' : ''), x + w - 14, yy + 4, '#ffe680', { align: 'right', shadow: true });
+        F().draw(ctx, of.label + '  (Nv ' + (of.lvl + 1) + '/5)', x + 26, yy, '#ece6f6', { shadow: true });
+        F().draw(ctx, of.cost ? of.eff : 'Nível máximo', x + 26, yy + 11, '#8a84a8');
+        if (of.cost) F().draw(ctx, of.cost.gold + ' moedas' + (of.cost.mat ? ' + ' + of.cost.n + 'x ' + G.Items[of.cost.mat].name : ''), x + w - 14, yy + 11, '#ffe680', { align: 'right', shadow: true });
       });
-      const yy = y + 42 + o.length * 24;
+      const yy = y + 42 + o.length * 26;
       if (this.sel === o.length) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 14); }
       F().draw(ctx, 'Sair', x + 26, yy, '#ece6f6', { shadow: true });
     }
@@ -498,51 +620,105 @@
   G.GameOverScreen = GameOverScreen;
 
   // ================================================================ Fim de capítulo
+  G.ChapterInfo = {
+    1: { title: 'O Começo da Jornada' },
+    2: { title: 'As Montanhas do Norte' },
+    3: { title: 'A Última Estrela' },
+  };
+  const NEXT_TEASER = {
+    1: 'Fragmentos da estrela caíram sobre a fortaleza abandonada nas montanhas. Algo lá em cima também está com fome.',
+    2: 'Restam as luzes sobre Velmora. A torre que ninguém lembrava está acordando — e Lirien sabe por quê.',
+  };
   class ChapterEnd {
-    constructor() { this.t = 0; this.page = 0; }
+    constructor(n) { this.t = 0; this.page = 0; this.n = n || 1; }
     update(dt, g) {
       this.t += dt;
       if (this.t > 2 && M().confirm) {
         if (this.page === 0) { this.page = 1; this.t = 0.5; G.Audio.sfx('uiOk'); }
-        else { G.Audio.sfx('uiOk'); g.ui.pop(); g.toTitle(); }
+        else {
+          G.Audio.sfx('uiOk'); g.ui.pop();
+          if (G.ChapterInfo[this.n + 1] && G.Scenes['ch' + (this.n + 1) + 'Intro']) g.startChapter(this.n + 1);
+          else g.toTitle();
+        }
       }
     }
     draw(ctx, g) {
       ctx.fillStyle = '#07060b'; ctx.fillRect(0, 0, W(), H());
-      // estrelas
       for (let i = 0; i < 80; i++) {
         const x = (i * 97.3) % W(), y = (i * 53.7) % (H() * 0.8);
         if (Math.sin(g.time * 2 + i) > -0.3) { ctx.fillStyle = i % 5 ? '#8a84a8' : '#ffffff'; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); }
       }
       const a = Math.min(1, this.t);
       ctx.globalAlpha = a;
+      const R = ['', 'I', 'II', 'III'];
       if (this.page === 0) {
-        F().draw(ctx, 'FIM DO CAPÍTULO I', W() / 2, 34, '#f2d98c', { align: 'center', shadow: true, scale: 2 });
-        F().draw(ctx, 'O Começo da Jornada', W() / 2, 58, '#c8c0d8', { align: 'center', shadow: true });
-        const rows = [
-          ['Tempo de jogo', U.formatTime(g.playTime)],
-          ['Memórias recuperadas', `${g.memories.size}/${Object.keys(G.MemoryDefs).length}`],
-          ['Páginas do Grimório', `${g.inv.count('pagina') + (g.inv.has('grimorio') ? 5 : 0)}/5`],
-          ['Segredos', `${g.secretsFound()}/${G.TOTAL_SECRETS || 6}`],
-          ['Missões concluídas', `${Object.keys(G.Quests).filter((q) => g.questState(q) === 'done').length}/${Object.keys(G.Quests).length}`],
-          ['Combos em dupla', String(g.stats.combos || 0)],
-          ['Vezes que um salvou o outro', String(g.stats.revives || 0)],
-        ];
+        F().draw(ctx, 'FIM DO CAPÍTULO ' + R[this.n], W() / 2, 30, '#f2d98c', { align: 'center', shadow: true, scale: 2 });
+        F().draw(ctx, G.ChapterInfo[this.n].title, W() / 2, 54, '#c8c0d8', { align: 'center', shadow: true });
+        const c = G.completion(g);
+        const rows = [['Tempo de jogo', U.formatTime(g.playTime)]].concat(c.rows.slice(0, 7).map(([k, v, t]) => [k, v + '/' + t]));
+        rows.push(['Combos em dupla', String(g.stats.combos || 0)]);
         rows.forEach(([k, v], i) => {
-          F().draw(ctx, k, W() / 2 - 120, 84 + i * 15, '#c8c0d8', { shadow: true });
-          F().draw(ctx, v, W() / 2 + 120, 84 + i * 15, '#f2d98c', { align: 'right', shadow: true });
+          F().draw(ctx, k, W() / 2 - 130, 74 + i * 14, '#c8c0d8', { shadow: true });
+          F().draw(ctx, v, W() / 2 + 130, 74 + i * 14, '#f2d98c', { align: 'right', shadow: true });
         });
+        F().draw(ctx, 'Jornada: ' + c.pct + '%', W() / 2, 74 + rows.length * 14 + 6, '#8ae8ff', { align: 'center', shadow: true });
       } else {
-        F().draw(ctx, 'Continua no Capítulo II', W() / 2, 70, '#f2d98c', { align: 'center', shadow: true, scale: 2 });
-        F().draw(ctx, 'AS MONTANHAS DO NORTE', W() / 2, 98, '#c8c0d8', { align: 'center', shadow: true });
-        F().drawWrapped(ctx, 'Fragmentos da estrela caíram sobre a fortaleza abandonada nas montanhas. Algo lá em cima também está com fome.', W() / 2 - 150, 130, 300, '#a898b8', { shadow: true, lineHeight: 12 });
-        F().draw(ctx, 'Obrigado por jogar.', W() / 2, 190, '#ece6f6', { align: 'center', shadow: true });
+        F().draw(ctx, 'Continua no Capítulo ' + R[this.n + 1], W() / 2, 70, '#f2d98c', { align: 'center', shadow: true, scale: 2 });
+        F().draw(ctx, (G.ChapterInfo[this.n + 1] || {}).title.toUpperCase(), W() / 2, 98, '#c8c0d8', { align: 'center', shadow: true });
+        F().drawWrapped(ctx, NEXT_TEASER[this.n] || '', W() / 2 - 150, 130, 300, '#a898b8', { shadow: true, lineHeight: 12 });
+        F().draw(ctx, 'O progresso foi salvo.', W() / 2, 190, '#ece6f6', { align: 'center', shadow: true });
       }
       if (this.t > 2 && Math.floor(g.time * 2) % 2) F().draw(ctx, 'Pressione Enter', W() / 2, H() - 24, '#8a84a8', { align: 'center', shadow: true });
       ctx.globalAlpha = 1;
     }
   }
   G.ChapterEnd = ChapterEnd;
+
+  // ================================================================ Créditos (fim do jogo)
+  class Credits {
+    constructor() { this.t = 0; this.y = 0; this.done = false; }
+    lines(g) {
+      const c = G.completion(g);
+      return [
+        ['ECOS DA JORNADA', 'big'], ['', ''],
+        ['Uma aventura cooperativa sobre memória,', ''], ['tempo e quem caminha ao nosso lado.', ''], ['', ''],
+        ['ELENCO', 'h'], ['Lirien — maga élfica', ''], ['Aldren — herói espadachim', ''], ['Orvin, Mirta, Tobin, Brunna, Bram, Pip, Edda, Lena e Hugo', ''],
+        ['Isolde, Garrik, Nessa, Tavi, Holt, Yara e Hrolf', ''], ['Sir Talen e Mestre Aurelian', ''], ['', ''],
+        ['AS ESTRELAS', 'h'], ['Morvath, o Devorador de Memórias', ''], ['Ysveth, a Geada Eterna', ''], ['Nyxara, a Mãe das Estrelas', ''], ['', ''],
+        ['FEITO COM', 'h'], ['Pixel art, música e sons gerados por código', ''], ['JavaScript puro, sem bibliotecas', ''], ['', ''],
+        ['A SUA JORNADA', 'h'],
+        ['Tempo: ' + U.formatTime(g.playTime), ''], ['Combos em dupla: ' + (g.stats.combos || 0), ''], ['Vezes que um salvou o outro: ' + (g.stats.revives || 0), ''],
+        ['Conclusão: ' + c.pct + '%', c.pct >= 100 ? 'gold' : ''], ['', ''],
+        [c.pct >= 100 ? 'Vocês encontraram TUDO. Obrigado de verdade.' : 'Ainda há segredos esperando por vocês.', ''], ['', ''], ['', ''],
+        ['Obrigado por jogar juntos.', 'big2'],
+      ];
+    }
+    update(dt, g) {
+      this.t += dt;
+      this.y += dt * 16 * (M().confirm && this.t > 1 ? 4 : 1);
+      const total = this.lines(g).length * 14 + H();
+      if ((this.y > total || (M().back && this.t > 2)) && !this.done) {
+        this.done = true;
+        g.ui.pop();
+        g.afterCredits();
+      }
+    }
+    draw(ctx, g) {
+      ctx.fillStyle = '#07060b'; ctx.fillRect(0, 0, W(), H());
+      for (let i = 0; i < 120; i++) {
+        const x = (i * 97.3) % W(), y = ((i * 53.7) + g.time * (i % 3 + 1) * 2) % H();
+        if (Math.sin(g.time * 2 + i) > -0.4) { ctx.fillStyle = i % 7 ? '#5a5480' : '#ffffff'; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); }
+      }
+      const L = this.lines(g);
+      L.forEach(([t, k], i) => {
+        const yy = Math.round(H() - this.y + i * 14);
+        if (yy < -20 || yy > H() + 10) return;
+        const col = k === 'h' ? '#f2d98c' : k === 'gold' ? '#7aff8a' : '#ece6f6';
+        F().draw(ctx, t, W() / 2, yy, col, { align: 'center', shadow: true, scale: k === 'big' || k === 'big2' ? 2 : 1 });
+      });
+    }
+  }
+  G.Credits = Credits;
 
   // ================================================================ Tela inicial
   class TitleScreen {
@@ -556,6 +732,18 @@
       this.sel = this.hasSave ? 1 : 0;
       this.bg = this.makeBackground();
       this.started = false;
+    }
+    subtitle() {
+      if (this._sub) return this._sub;
+      const d = G.Save.read();
+      const f = (d && d.flags) || {};
+      const R = ['', 'I', 'II', 'III'];
+      let n = 1;
+      if (f.chapter1_done) n = 2;
+      if (f.chapter2_done) n = 3;
+      if (f.game_complete) return (this._sub = 'Uma jornada completa');
+      this._sub = 'Capítulo ' + R[n] + ' — ' + G.ChapterInfo[n].title;
+      return this._sub;
     }
     makeBackground() {
       return G.Pixel.make(W(), H(), (x) => {
@@ -656,7 +844,7 @@
       F().draw(ctx, 'ECOS DA JORNADA', W() / 2 + 1, ty + 1, '#8a6ad8', { align: 'center', scale: 3 });
       ctx.globalAlpha = 1;
       F().draw(ctx, 'ECOS DA JORNADA', W() / 2, ty, '#f2d98c', { align: 'center', scale: 3, shadow: true, shadowColor: '#3a2458' });
-      F().draw(ctx, 'Capítulo I — O Começo da Jornada', W() / 2, ty + 32, '#c8c0e0', { align: 'center', shadow: true });
+      F().draw(ctx, this.subtitle(), W() / 2, ty + 32, '#c8c0e0', { align: 'center', shadow: true });
       if (!this.started) {
         if (Math.floor(t * 2) % 2) F().draw(ctx, 'Pressione qualquer tecla', W() / 2, 170, '#ece6f6', { align: 'center', shadow: true });
       } else if (!g.ui.open) {

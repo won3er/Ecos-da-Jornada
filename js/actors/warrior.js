@@ -20,6 +20,7 @@
     }
 
     cancelActions(g) {
+      if (this.carrying) { const li = this.carrying; this.carrying = null; if (li.carried) li.hopOff(g); }
       this.blocking = false;
       this.grabbed = null;
       if (this.restrained) { this.restrained.held = false; this.restrained = null; }
@@ -28,6 +29,7 @@
 
     updateState(dt, g, inp) {
       this.comboT = Math.max(0, this.comboT - dt);
+      this.counterT = Math.max(0, (this.counterT || 0) - dt);
       if (this.slashFx) { this.slashFx.t += dt; if (this.slashFx.t > this.slashFx.dur) this.slashFx = null; }
       this.tauntT = Math.max(0, this.tauntT - dt);
       this.blocking = this.state === 'block';
@@ -41,6 +43,7 @@
       if (s === 'grab') return this.stGrab(dt, g, inp);
       if (s === 'restrain') return this.stRestrain(dt, g, inp);
       if (s === 'special') return this.stSpecial(dt, g, inp);
+      if (s === 'carry') return this.stCarry(dt, g, inp);
       if (s === 'stagger') { if (this.stateT > 0.6) this.state = 'normal'; return; }
       this.state = 'normal';
     }
@@ -70,6 +73,7 @@
         if (t) { t.interact(this, g); return; }
         const pt = this.partner(g);
         if (pt && pt.state === 'down' && U.dist(this.x, this.y, pt.x, pt.y) < 24) return;
+        if (this.canLift(g)) { this.lift(g); return; }
         this.dash(g, inp);
         return;
       }
@@ -103,8 +107,10 @@
       if (this.stateT >= t0 && this.stateT <= t1) {
         const big = this.combo === 3;
         const rect = this.attackRect(big ? 28 : 24, big ? 30 : 24);
-        const dmg = g.stat('aldren', 'power') * (big ? 1.5 : 1);
+        let dmg = g.stat('aldren', 'power') * (big ? 1.5 : 1);
+        if (this.counterT > 0) dmg *= 3;
         const hits = G.Combat.hitRect(g, rect, { dmg, kind: 'sword', src: this, physical: true, dir: { x: this.fx, y: this.fy }, kb: big ? 150 : 70 }, this.atkHit);
+        if (this.counterT > 0 && hits.some((h) => h.isEnemy)) { this.counterT = 0; g.comboText(this.x, this.y - 36, 'CONTRA-ATAQUE!'); }
         if (hits.some((h) => h.isEnemy)) { g.hitstop(big ? 0.06 : 0.035); g.camera.shake(big ? 2 : 1, 0.1); }
       }
       if (this.stateT >= this.atkDur) {
@@ -142,8 +148,10 @@
       if (this.stateT >= 0.1 && !this._heavyDone) {
         this._heavyDone = true;
         const rect = this.attackRect(32, 34);
-        const dmg = g.stat('aldren', 'power') * 2.4;
+        let dmg = g.stat('aldren', 'power') * 2.4;
+        if (this.counterT > 0) dmg *= 3;
         const hits = G.Combat.hitRect(g, rect, { dmg, kind: 'heavy', src: this, physical: true, dir: { x: this.fx, y: this.fy }, kb: 200, stun: 2.5 }, this.atkHit);
+        if (this.counterT > 0 && hits.some((h) => h.isEnemy)) { this.counterT = 0; g.comboText(this.x, this.y - 36, 'CONTRA-ATAQUE!'); }
         G.Audio.sfx('heavyHit');
         g.camera.shake(hits.length ? 4 : 2, 0.25);
         if (hits.length) g.hitstop(0.08);
@@ -216,6 +224,7 @@
       else if (src && src.stun) src.stun(1.6, g);
       this.addSpecial(12);
       if (g.has('guarda_perfeita')) this.heal(4, g);
+      if (g.has('contra_ataque')) { this.counterT = 2.5; g.particles.text(this.x, this.y - 42, 'CONTRA-ATAQUE PRONTO', '#ffb84a'); }
       this.blockT = 99;
     }
     blockProjectile(proj, g) {
@@ -265,19 +274,109 @@
       g.registerCombo('prism');
     }
 
-    // ------------------------------------------------ investida
+    // ------------------------------------------------ arremesso (carregar e lançar a Lirien)
+    canLift(g) {
+      if (!g.has('arremesso')) return false;
+      const li = this.partner(g);
+      if (!li || li.state !== 'normal' || li.isDown || li.carried) return false;
+      const dx = li.x - this.x, dy = li.y - this.y, d = Math.hypot(dx, dy);
+      if (d > 20) return false;
+      return d < 6 || (dx * this.fx + dy * this.fy) / d > 0.3;
+    }
+    lift(g) {
+      const li = this.partner(g);
+      li.cancelActions(g);
+      li.state = 'carried'; li.stateT = 0; li.carried = true; li.moving = false;
+      this.carrying = li;
+      this.state = 'carry'; this.stateT = 0;
+      G.Audio.sfx('lift');
+      if (!g.flag('tut_carry')) { g.setFlag('tut_carry', true); g.toast('Lirien está nos ombros! Ela ainda pode atacar. Aldren: ' + G.Characters.aldren.keys.act + ' de novo para ARREMESSAR (passa por cima de muros baixos, cercas, água e abismos).', 6); }
+    }
+    stCarry(dt, g, inp) {
+      const li = this.carrying;
+      if (!li || !li.carried || li.state !== 'carried') { this.carrying = null; this.state = 'normal'; return; }
+      this.walk(dt, g, inp, 0.72);
+      li.x = this.x; li.y = this.y + 1; li.z = 17; li.dir = li.dir || this.dir;
+      if (this.stateT > 0.15 && inp.act.pressed) { this.throwPartner(g); return; }
+      if (inp.skill.pressed) { li.hopOff(g, true); this.state = 'normal'; }
+    }
+    // procura o ponto de pouso mais distante na direção olhada
+    throwTarget(g, li) {
+      const n = U.norm(this.fx, this.fy);
+      const maxD = g.has('arremesso_forte') ? 112 : 84;
+      let best = null;
+      for (let d = 8; d <= maxD; d += 4) {
+        const nx = this.x + n.x * d, ny = this.y + n.y * d;
+        const tx = Math.floor(nx / TS), ty = Math.floor((ny - 4) / TS);
+        const td = G.Tiles.def(g.level.tile(tx, ty));
+        if (td.tall || td.void) break; // paredes altas, árvores e o fim do mapa param o voo
+        let wall = false;
+        for (const e of g.solids) {
+          if (e.dead || !e.blocksProjectiles || e === li || e.low) continue;
+          const b = e.box;
+          if (nx > b.x - 2 && nx < b.x + b.w + 2 && ny - 4 > b.y - 6 && ny - 4 < b.y + b.h + 2) { wall = true; break; }
+        }
+        if (wall) break; // portões, barreiras, casas e caixotes também
+        const b = { x: nx - li.w / 2, y: ny - li.h, w: li.w, h: li.h };
+        if (!G.Physics.blocked(g, b, li) && !g.level.isHole(tx, Math.floor((ny - 2) / TS))) best = { x: nx, y: ny };
+      }
+      return best;
+    }
+    throwPartner(g) {
+      const li = this.carrying;
+      const to = this.throwTarget(g, li);
+      this.carrying = null;
+      this.state = 'normal'; this.stateT = 0;
+      li.carried = false; li.state = 'normal';
+      if (!to) { li.hopOff(g); this.say('Não tem onde ela cair!', 1.4); return; }
+      li.z = 17;
+      G.Audio.sfx('throw');
+      li.startFlight(g, to.x, to.y, 0.5, 34, (gg, who) => {
+        const hits = G.Combat.hitCircle(gg, who.x, who.y - 6, 22, { dmg: gg.stat('lirien', 'magic') * (gg.has('arremesso_forte') ? 2.2 : 1.5), kind: 'impact', src: who, magic: true, stun: 1.2, kb: 90, dir: { x: this.fx, y: this.fy } });
+        if (hits.some((h) => h.isEnemy)) { gg.comboText(who.x, who.y - 34, 'METEORO!'); gg.registerCombo('meteoro'); gg.camera.shake(3, 0.25); }
+        gg.particles.ring(who.x, who.y - 2, 3, 22, 0.35, '#c8a8ff', 2);
+      });
+      li.z = 17;
+    }
+
+    // ------------------------------------------------ investida (e Salto do Herói)
     dash(g, inp) {
       if (this.cooldowns.dash || this.st < 20) return;
       let mx = inp.mx || 0, my = inp.my || 0;
       if (Math.hypot(mx, my) < 0.1) { mx = this.fx; my = this.fy; }
       const n = U.norm(mx, my);
       this.setDir(n.x, n.y);
+      if (g.has('salto') && this.tryLeap(g, n)) return;
       this.dashV = { x: n.x * 250, y: n.y * 250 };
       this.state = 'dash'; this.stateT = 0;
       this.invuln = Math.max(this.invuln, 0.22);
       this.st -= 20;
       this.cooldowns.dash = 0.4;
       G.Audio.sfx('dash');
+    }
+    // Salto do Herói: atravessa vãos curtos (até ~2 tiles) de abismo ou água
+    tryLeap(g, n) {
+      let gap = false;
+      for (let d = 4; d <= 18; d += 2) {
+        const tx = Math.floor((this.x + n.x * d) / TS), ty = Math.floor((this.y + n.y * d - 2) / TS);
+        if (g.level.isHole(tx, ty)) { gap = true; break; }
+      }
+      if (!gap) return false;
+      for (let d = 20; d <= 58; d += 2) {
+        const nx = this.x + n.x * d, ny = this.y + n.y * d;
+        const tx = Math.floor(nx / TS), ty = Math.floor((ny - 4) / TS);
+        const td = G.Tiles.def(g.level.tile(tx, ty));
+        if (td.tall || td.void) return false;
+        if (g.solids.some((e) => !e.dead && e.blocksProjectiles && U.pointInRect(nx, ny - 4, e.box))) return false;
+        const b = { x: nx - this.w / 2, y: ny - this.h, w: this.w, h: this.h };
+        if (!G.Physics.blocked(g, b, this) && !g.level.isHole(tx, Math.floor((ny - 2) / TS))) {
+          this.st -= 20; this.cooldowns.dash = 0.6;
+          G.Audio.sfx('dash');
+          this.startFlight(g, nx, ny, 0.42, 18, () => { g.camera.shake(1.5, 0.15); });
+          return true;
+        }
+      }
+      return false;
     }
     stDash(dt, g, inp) {
       this.moving = true;
@@ -355,6 +454,7 @@
       G.Physics.move(g, e, (tx - e.x) * 0.3, (ty - e.y) * 0.3);
     }
     onHurt(g) {
+      if (this.state === 'carry' && this.carrying) { this.carrying.hopOff(g); this.carrying = null; this.state = 'normal'; }
       if (this.state === 'restrain' && this.restrained) { this.restrained.held = false; this.restrained = null; this.state = 'normal'; }
       if (this.state === 'grab') { this.state = 'normal'; this.grabbed = null; }
       if (this.state === 'heavyCharge') { this.state = 'normal'; this.chargeT = 0; }

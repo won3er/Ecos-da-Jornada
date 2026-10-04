@@ -121,12 +121,32 @@
       return !this.dyn.get(this.key(tx, ty));
     }
     isWater(tx, ty) { return !!T.def(this.tile(tx, ty)).water; }
+    isSlip(x, y) {
+      const tx = Math.floor(x / TS), ty = Math.floor(y / TS);
+      if (this.dyn.get(this.key(tx, ty))) return false;
+      return !!T.def(this.tile(tx, ty)).slip;
+    }
+    // Chama Estelar derrete paredes de gelo ('I')
+    melt(tx, ty, g) {
+      const d = T.def(this.tile(tx, ty));
+      if (!d.melt) return false;
+      this.setTile(tx, ty, this.def.meltTo || 's');
+      if (g) {
+        g.particles.burst(tx * TS + 8, ty * TS + 8, 18, { colors: ['#bfe4f6', '#ffffff', '#8ac0e0'], speed: 50, life: 0.6, up: 20 });
+        for (let i = 0; i < 6; i++) g.particles.add({ x: tx * TS + U.rand(2, 14), y: ty * TS + U.rand(2, 14), vy: -18, life: 1, color: '#e8f4ff', size: 2 });
+        G.Audio.sfx('melt');
+      }
+      return true;
+    }
     isChasm(tx, ty) { return !!T.def(this.tile(tx, ty)).chasm; }
     surfaceAt(x, y) {
       const tx = Math.floor(x / TS), ty = Math.floor(y / TS);
       const dy = this.dynAt(tx, ty);
-      if (dy) return dy.kind === 'ice' ? 'stone' : 'wood';
+      if (dy) return dy.kind === 'ice' ? 'stone' : dy.kind === 'plat' ? 'stone' : 'wood';
       const d = T.def(this.tile(tx, ty));
+      if (d.g === 'snow' || (d.g === 'grass' && this.theme === 'snow')) return 'snow';
+      if (d.g === 'ice') return 'stone';
+      if (d.g === 'star' || d.g === 'planks' || d.g === 'carpet') return d.g === 'planks' ? 'wood' : 'stone';
       if (d.g === 'stone' || d.g === 'cobble' || d.g === 'cave' || d.g === 'magic') return 'stone';
       if (d.g === 'wood' || d.g === 'bridge') return 'wood';
       return 'grass';

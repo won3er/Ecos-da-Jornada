@@ -226,7 +226,7 @@
         }
         return true;
       }
-      if (kind === 'bolt' || kind === 'charged' || kind === 'frost' || kind === 'special' || kind === 'prism') {
+      if (kind === 'bolt' || kind === 'charged' || kind === 'frost' || kind === 'special' || kind === 'prism' || kind === 'fire' || kind === 'beam') {
         if (this.on && !this.momentary) return true;
         this.on = true;
         G.Audio.sfx('crystal');
@@ -401,7 +401,7 @@
     constructor(o) { super(Object.assign({ solid: true, w: 16, h: 12, hh: 18 }, o)); this.hp = 3; this.wob = 0; this.blocksProjectiles = true; }
     init(g) { if (this.flag && g.flag(this.flag)) this.dead = true; }
     onHit(kind, src, g) {
-      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'golem') {
+      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'golem' || kind === 'fire') {
         this.hp -= kind === 'sword' ? 1 : 3;
         this.wob = 0.2;
         G.Audio.sfx('hit');
@@ -427,7 +427,7 @@
     constructor(o) { super(Object.assign({ solid: true, w: 14, h: 10, hh: 12 }, o)); this.cut = false; this.theme = o.theme || 'village'; this.drop = o.drop; }
     onHit(kind, src, g) {
       if (this.cut) return false;
-      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'charged' || kind === 'frost') {
+      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'charged' || kind === 'frost' || kind === 'fire' || kind === 'impact') {
         this.cut = true; this.solid = false;
         G.Audio.sfx('swing');
         g.particles.burst(this.x, this.y - 6, 14, { colors: ['#4a8a3a', '#6aa04a', '#2e5a28'], speed: 60, life: 0.6, g: 120, up: 40 });
@@ -443,11 +443,21 @@
 
   // ---------------------------------------------------------------- BRASEIRO (aceso por magia)
   class Brazier extends Obj {
-    constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 18 }, o)); this.lit = !!o.lit; this.blocksProjectiles = true; }
+    constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 18 }, o)); this.lit = !!o.lit; this.blocksProjectiles = true; this.needsFire = !!o.needsFire; this.burnTime = o.burnTime || 0; this.litT = 0; }
     init(g) { if (this.flag && g.flag(this.flag)) this.lit = true; }
+    update(dt, g) {
+      // braseiros temporários apagam sozinhos (puzzles de tempo)
+      if (this.burnTime && this.lit) { this.litT += dt; if (this.litT > g.syncWindow(this.burnTime) && !(this.flag && g.flag(this.flag))) { this.lit = false; this.litT = 0; G.Audio.sfx('plate'); g.particles.burst(this.x, this.y - 18, 8, { color: '#5a5460', speed: 20, life: 0.6 }); } }
+      else this.litT = 0;
+    }
     isOn() { return this.lit; }
     onHit(kind, src, g) {
-      if (kind === 'bolt' || kind === 'charged' || kind === 'special' || kind === 'prism') {
+      if (kind === 'bolt' || kind === 'charged' || kind === 'special' || kind === 'prism' || kind === 'fire') {
+        if (this.needsFire && kind !== 'fire' && !this.lit) {
+          G.Audio.sfx('immune');
+          if (!this._nf || g.time - this._nf > 1.5) { this._nf = g.time; g.particles.text(this.x, this.y - 30, 'Precisa de fogo de verdade', '#ffb84a'); }
+          return true;
+        }
         if (!this.lit) {
           this.lit = true; if (this.flag) g.setFlag(this.flag, true);
           G.Audio.sfx('bigBolt');
@@ -601,10 +611,14 @@
     constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 26 }, o)); this.active = false; this.cpId = o.cp || o.id; }
     canInteract() { return true; }
     prompt() { return 'Meditar'; }
-    interact(p, g) { this.activate(g, true); g.ui.openSkills(g, true); }
+    interact(p, g) { this.activate(g, true); g.ui.openWaystone(g, this); }
     activate(g, silent) {
       const wasActive = g.checkpoint && g.checkpoint.id === this.cpId && g.checkpoint.area === g.level.id;
       g.setCheckpoint({ id: this.cpId, area: g.level.id, x: this.x, y: this.y + 14 });
+      // registra para a viagem rápida
+      if (!g.inMemory && this.cpId && !g.waystones[this.cpId]) {
+        g.waystones[this.cpId] = { area: g.level.id, x: this.x, y: this.y + 14, name: this.data.name || g.level.def.title || g.level.id, ch: g.chapter, order: Object.keys(g.waystones).length };
+      }
       this.active = true;
       for (const p of g.players) if (p) p.fullHeal(g);
       g.save();
@@ -924,6 +938,7 @@
       icon('bridge', (x) => { x.fillStyle = '#6ad8ff'; x.fillRect(0, 4, 10, 3); x.fillStyle = '#c8f4ff'; x.fillRect(0, 4, 10, 1); x.fillRect(1, 6, 2, 1); x.fillRect(6, 6, 2, 1); x.fillStyle = '#2a4a6a'; x.fillRect(0, 7, 1, 3); x.fillRect(9, 7, 1, 3); });
       icon('shield', (x) => { x.fillStyle = '#5a6676'; x.fillRect(1, 0, 8, 6); x.fillRect(2, 6, 6, 2); x.fillRect(3, 8, 4, 2); x.fillStyle = '#9aa6b6'; x.fillRect(2, 1, 6, 5); x.fillRect(3, 6, 4, 2); x.fillStyle = '#c84a4a'; x.fillRect(4, 1, 2, 6); });
       icon('taunt', (x) => { x.fillStyle = '#ffd84a'; x.fillRect(4, 0, 2, 6); x.fillRect(4, 8, 2, 2); x.fillStyle = '#ff8a3a'; x.fillRect(1, 2, 1, 4); x.fillRect(8, 2, 1, 4); });
+      if (G.IconsExtra) G.IconsExtra(icon, P);
     },
     draw(ctx, name, x, y) { const i = ICON[name] || ICON.bag; if (i) ctx.drawImage(i, Math.round(x), Math.round(y)); },
     get: (name) => ICON[name] || ICON.bag,

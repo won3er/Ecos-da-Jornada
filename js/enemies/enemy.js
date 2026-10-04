@@ -73,6 +73,16 @@
       }
       let dmg = hit.dmg;
       let combo = null;
+      if (hit.kind === 'fire') {
+        if (this.def.fireImmune) {
+          this.flash = 0.06; G.Audio.sfx('immune');
+          if (!this._immuneTxt || g.time - this._immuneTxt > 0.8) { this._immuneTxt = g.time; g.particles.text(this.x, this.y - this.hh - 10, 'Imune a fogo', '#ffb88a'); }
+          return true;
+        }
+        if (this.def.weakFire) dmg *= 2;
+        if (this.frozen) { dmg *= 2.5; combo = 'CHOQUE TÉRMICO!'; this.frozenT = 0; G.Audio.sfx('melt'); }
+      }
+      if (hit.freeze && this.def.weakFire && !this.def.noFreeze) dmg *= 0.5; // criaturas de gelo resistem à Geada
       if (this.stunned && hit.kind === 'charged') { dmg *= 2.5; combo = 'ABERTURA!'; }
       if (this.held && magic) { dmg *= 2; combo = combo || 'PRISÃO!'; }
       if (this.frozen && hit.kind === 'heavy') { dmg *= 3; combo = 'ESTILHAÇO!'; this.frozenT = 0; G.Audio.sfx('shatter'); g.particles.burst(this.x, this.y - 8, 24, { colors: ['#bfe4f6', '#ffffff', '#8ac0e0'], speed: 90, life: 0.6, size: 2 }); }
@@ -93,7 +103,8 @@
       // reações
       if (!this.def.heavyBody && hit.dir && hit.kb) { this.kvx = hit.dir.x * hit.kb; this.kvy = hit.dir.y * hit.kb; }
       if (hit.stun) this.stun(hit.stun, g);
-      if (hit.freeze && !this.def.noFreeze) { this.frozenT = hit.freeze; this.state = 'frozen'; }
+      if (hit.freeze && !this.def.noFreeze && !this.def.weakFire) { this.frozenT = hit.freeze; this.state = 'frozen'; this.burnT = 0; }
+      if (hit.burn && !this.def.noBurn && this.hp > 0) { this.burnT = Math.max(this.burnT || 0, hit.burn); this.burnDmg = Math.max(1, Math.round(hit.dmg * 0.18)); this.burnTick = 0.5; }
       this.onDamaged(hit, g);
       G.Audio.sfx('enemyHurt');
       if (this.hp <= 0) this.die(g);
@@ -134,6 +145,17 @@
       this.hpShowT = Math.max(0, this.hpShowT - dt);
       this.contactCD = Math.max(0, this.contactCD - dt);
       if (this.deathT > 0) { this.deathT += dt; if (this.deathT > 0.35) this.dead = true; return; }
+      // queimadura (Chama Estelar)
+      if (this.burnT > 0) {
+        this.burnT -= dt; this.burnTick -= dt;
+        if (Math.random() < 0.5) g.particles.add({ x: this.x + U.rand(-5, 5), y: this.y - U.rand(2, this.hh), vy: -25, life: 0.4, color: U.pick(['#ff8a3a', '#ffd84a', '#c8401a']), glow: true });
+        if (this.burnTick <= 0) {
+          this.burnTick = 0.5;
+          this.hp -= this.burnDmg; this.flash = 0.05; this.hpShowT = 1.5;
+          g.particles.text(this.x, this.y - this.hh - 4, this.burnDmg, '#ffb84a');
+          if (this.hp <= 0) { this.die(g); return; }
+        }
+      }
       // empurrão
       if (Math.abs(this.kvx) + Math.abs(this.kvy) > 2) {
         G.Physics.move(g, this, this.kvx * dt, this.kvy * dt);
@@ -201,6 +223,7 @@
       const x = Math.round(this.x - cam.rx), y = Math.round(this.y - cam.ry);
       if (this.frozenT > 0) G.FX.iceBlock(ctx, x, y + 1, this.hw + 6, this.hh + 6, g.time);
       if (this.stunT > 0) G.FX.stars(ctx, x, y - this.hh - 6, g.time);
+      if (this.slowK && this.slowK < 1) { ctx.globalAlpha = 0.5; G.Pixel.ring(ctx, x, y - this.hh / 2, Math.max(6, this.hw / 2 + 3), '#c8f0ff'); ctx.globalAlpha = 1; }
       if (this.held) { ctx.fillStyle = '#ffe680'; ctx.fillRect(x - 6, y - this.hh - 2, 12, 1); }
       if (this.hpShowT > 0 && this.hp > 0 && !this.boss) {
         const w = Math.max(14, Math.min(30, this.maxHp / 2));

@@ -23,9 +23,13 @@
     use(id, target, g) {
       const it = G.Items[id];
       if (!it || !it.use || !this.has(id)) return false;
-      if (target.isDown) return false;
-      if (it.use.heal) target.heal(Math.round(target.maxHp * it.use.heal), g);
-      if (it.use.restore) { target.mp = target.maxMp; target.st = target.maxSt; G.Audio.sfx('heal'); }
+      const targets = it.use.both && g ? g.players.filter((p) => p && !p.isDown) : [target];
+      if (!targets.length || (!it.use.both && target.isDown)) return false;
+      for (const t of targets) {
+        if (it.use.heal) t.heal(Math.round(t.maxHp * it.use.heal), g);
+        if (it.use.restore) { t.mp = t.maxMp; t.st = t.maxSt; G.Audio.sfx('heal'); }
+        if (it.use.special) { t.special = Math.min(100, t.special + it.use.special); G.Audio.sfx('chargeReady'); }
+      }
       this.remove(id, 1);
       return true;
     }

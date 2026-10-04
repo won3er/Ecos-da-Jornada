@@ -45,6 +45,11 @@
         return inp;
       }
 
+      // UNIÃO no modo solo: quando o jogador solta o especial, a IA acompanha
+      if (me.special >= 100 && g.lastSpecial && g.time - g.lastSpecial[leader.index] < 0.5 && g.lastSpecial[leader.index] > 0 && me.state === 'normal') {
+        inp.attack.pressed = true; inp.attack.down = true; inp.skill.down = true; inp.skill.pressed = true;
+        return inp;
+      }
       // modo "segurar posição" (após trocar com Tab)
       if (this.hold && this.hold.who === me.index) {
         const h = this.hold;

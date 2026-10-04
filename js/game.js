@@ -64,6 +64,15 @@
       this.tauntT = 0;
       this.inMemory = null;
       this.present = null;
+      this.waystones = {};
+      this.bestiary = {};
+    }
+    // capítulo atual (derivado das flags da história)
+    get chapter() {
+      if (this.flag('game_complete')) return 4;
+      if (this.flag('chapter2_done')) return 3;
+      if (this.flag('chapter1_done')) return 2;
+      return 1;
     }
 
     // ============================================================ Estados
@@ -92,7 +101,38 @@
       this.refreshStats();
       for (const p of this.players) p.fullHeal(this);
       this.fade.a = 1; this.fade.target = 0;
+      // save antigo que terminou um capítulo mas não começou o próximo
+      const pend = this.pendingChapter();
+      if (pend) { this.startChapter(pend); return; }
       this.toast('Jornada retomada.', 2);
+    }
+    // depois dos créditos: o mundo continua aberto para chegar aos 100%
+    afterCredits() {
+      this.setFlag('game_complete', true);
+      this.setCheckpoint({ id: 'cp_vila_fim', area: 'vila', x: 23 * 16 + 8, y: 18 * 16 + 12 });
+      this.state = 'play';
+      this.inMemory = null; this.memBackup = null;
+      for (const p of this.players) { p.young = false; p.fullHeal(this); }
+      this.loadArea('vila', 'start');
+      this.save();
+      this.fade.a = 1; this.fade.target = 0;
+      G.Audio.playMusic('village', 2);
+      this.toast('A jornada terminou... mas o mundo continua. Explorem e cheguem aos 100%!', 6);
+    }
+    pendingChapter() {
+      if (this.flag('chapter1_done') && !this.flag('ch2_started')) return 2;
+      if (this.flag('chapter2_done') && !this.flag('ch3_started')) return 3;
+      return 0;
+    }
+    // começa um novo capítulo (chamado no fim do anterior ou ao continuar)
+    startChapter(n) {
+      this.state = 'play';
+      this.ui.clear(); this.co.clear(); this.dialogue.active = false;
+      if (!this.players.length) this.makePlayers();
+      this.setFlag('ch' + n + '_started', true);
+      const sc = G.Scenes['ch' + n + 'Intro'];
+      this.fade.a = 1; this.fade.target = 1;
+      if (sc) this.co.start(sc, this, { name: 'intro', persist: true });
     }
     toTitle() {
       this.state = 'title';
@@ -120,6 +160,7 @@
         checkpoint: this.checkpoint, flags: this.flags, inv: this.inv.serialize(), quests: this.quests.serialize(),
         prog: this.prog.serialize(), memories: [...this.memories], spells: this.unlockedSpells, abilities: [...this.abilities],
         gold: this.gold, stats: this.stats, playTime: this.playTime, savedAt: Date.now(),
+        waystones: this.waystones, bestiary: this.bestiary,
       };
     }
     loadSaveData(d) {
@@ -134,6 +175,8 @@
       this.stats = Object.assign({ kills: 0, combos: 0, downs: 0, revives: 0 }, d.stats || {});
       this.playTime = d.playTime || 0;
       this.checkpoint = d.checkpoint || null;
+      this.waystones = Object.assign({}, d.waystones || {});
+      this.bestiary = Object.assign({}, d.bestiary || {});
     }
     save() {
       if (this.inMemory || this.state !== 'play') return;
@@ -157,6 +200,9 @@
       const eq = this.inv.equip[key] || {};
       if (key === 'aldren' && eq.cosmetic === 'capa_cinzenta') return G.Sprites.recolor('aldren', { q: '#2e2e38', r: '#5a5a68', R: '#8a8a9a' });
       if (key === 'lirien' && eq.cosmetic === 'fita_estelar') return G.Sprites.recolor('lirien', { k: '#141434', g: '#26265a', G: '#4a4a96', y: '#e8e0ff', Y: '#ffffff' });
+      if (key === 'aldren' && eq.cosmetic === 'capa_neve') return G.Sprites.recolor('aldren', { q: '#8a96aa', r: '#c8d4e4', R: '#f2f6fb' });
+      if (key === 'aldren' && eq.cosmetic === 'capa_talen') return G.Sprites.recolor('aldren', { q: '#1a2a5a', r: '#2a4a8a', R: '#4a78c8' });
+      if (key === 'lirien' && eq.cosmetic === 'manto_aurora') return G.Sprites.recolor('lirien', { k: '#1a3a3a', g: '#2a7a6a', G: '#6ad8a8', y: '#ff9ad8', Y: '#ffd0f0' });
       return G.Sprites[key];
     }
     toast(text, t = 2.5) {
@@ -201,6 +247,8 @@
         this.camera.shake(5, 0.6);
         for (const pl of this.players) G.Combat.hitCircle(this, pl.x, pl.y - 8, 70, { dmg: 40, kind: 'special', src: pl, magic: true, stun: 2 });
         this.registerCombo('uniao');
+        this.lastSpecial = [0, 0];
+        if (this.boss && this.boss.onUnion) this.boss.onUnion(this);
       }
     }
     hitstop(t) { this.hitstopT = Math.max(this.hitstopT || 0, t); }
@@ -302,7 +350,7 @@
       }
       this.players.forEach((p, i) => {
         if (!p) return;
-        p.state = 'normal';
+        p.state = 'normal'; p.z = 0; p.flight = null; p.carried = false; p.svx = 0; p.svy = 0; p.frozenSolid = 0; p.chillT = 0;
         if (p.hp <= 0) p.hp = Math.max(1, Math.round(p.maxHp * 0.3)); // nunca "vivo" com 0 de vida
         p.stateT = 0; p.kvx = 0; p.kvy = 0; p.bubbleText = null; p.stuckT = 0;
         p.cancelActions(this);
@@ -611,6 +659,7 @@
 
     onEnemyKilled(e) {
       this.stats.kills++;
+      if (e.type) this.bestiary[e.type] = (this.bestiary[e.type] || 0) + 1;
       if (e.type === 'greywolf') {
         this.spawnPickup('presa', e.x, e.y, { flag: 'presa_lobo' });
         this.setFlag('lobo_dead', true);
@@ -666,17 +715,28 @@
       // jogador caído pode ser "interagido" pelo outro: tratado no Character
 
       for (const p of this.players) p.update(dt, this);
+      if (!this.inputLocked()) this.applyWind(dt);
+      this.stasisList = this.entities.filter((e) => e instanceof G.ObjectTypes.stasis && !e.dead);
       const list = this.entities;
       // durante cutscenes os inimigos e projéteis ficam em pausa (exceto animações de chefe)
       const freeze = this.co.blocking && !this.transitioning;
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
         if (e.dead) continue;
-        if (freeze && (e.isEnemy || e instanceof G.Combat.Projectile)) {
-          if (e.boss && ['dying', 'transition', 'roar', 'dormant'].includes(e.state)) e.update(dt, this);
+        const proj = e instanceof G.Combat.Projectile;
+        if (freeze && (e.isEnemy || proj)) {
+          if (e.boss && ['dying', 'transition', 'roar', 'dormant', 'intro'].includes(e.state)) e.update(dt, this);
           else e.animT = (e.animT || 0) + dt;
           continue;
         }
+        // Estase: inimigos e projéteis inimigos dentro da bolha andam devagar
+        if (this.stasisList.length && (e.isEnemy || (proj && e.team === 'enemy'))) {
+          const k = this.stasisAt(e.x, e.y);
+          e.slowK = k;
+          e.update(dt * k, this);
+          continue;
+        }
+        e.slowK = 1;
         e.update(dt, this);
       }
       this.entities = this.entities.filter((e) => !e.dead);
@@ -694,6 +754,56 @@
       this.camera.extra = bb && !bb.dead ? { x: bb.x, y: bb.y - 24 } : null;
       this.camera.update(dt, this.players);
       G.HUD.update(dt, this);
+    }
+
+    // fator de tempo em um ponto (bolhas de Estase)
+    stasisAt(x, y) {
+      const l = this.stasisList || [];
+      for (const b of l) if (!b.dead && b.contains(x, y)) return this.has('estase_longa') ? 0.2 : 0.28;
+      return 1;
+    }
+
+    // Vento: empurra (Lirien é leve; Aldren, pesado). Com o escudo erguido contra
+    // o vento, o Aldren não se move — e quem estiver logo atrás dele fica protegido.
+    applyWind(dt) {
+      const winds = this.level.def.winds;
+      if (!winds || !winds.length) return;
+      const [li, al] = this.players;
+      for (const p of this.players) {
+        if (!p || p.isDown || p.state === 'flight' || p.carried) continue;
+        for (const w of winds) {
+          if (w.cond && !w.cond(this)) continue;
+          const r = { x: w.x * TS, y: w.y * TS, w: w.w * TS, h: w.h * TS };
+          if (!U.pointInRect(p.x, p.y - 2, r)) continue;
+          const pulse = w.gust ? (Math.sin(this.time * (w.gustSpeed || 1.4)) > 0.2 ? 1 : 0.15) : 1;
+          const f = (w.force || 90) * pulse;
+          const wd = U.norm(w.dx, w.dy);
+          let k = p.kind === 'mage' ? 1 : 0.38;
+          // escudo contra o vento
+          const shieldUp = al && al.blocking && !al.isDown && (al.fx * -wd.x + al.fy * -wd.y) > 0.7;
+          if (p === al && shieldUp) k = 0;
+          if (p === li && shieldUp) {
+            // "sombra" do escudo: um cone atrás do Aldren, no sentido do vento
+            const rx = li.x - al.x, ry = li.y - al.y;
+            const along = rx * wd.x + ry * wd.y, side = Math.abs(rx * -wd.y + ry * wd.x);
+            const reach = this.has('escudo_vento') ? 80 : 58;
+            if (along > -4 && along < reach && side < 12 + along * 0.3) k = 0;
+          }
+          if (k > 0) p.tryMove(this, wd.x * f * k * dt, wd.y * f * k * dt);
+        }
+      }
+      // partículas do vento dentro da tela
+      const cam = this.camera;
+      for (const w of winds) {
+        if (w.cond && !w.cond(this)) continue;
+        const pulse = w.gust ? (Math.sin(this.time * (w.gustSpeed || 1.4)) > 0.2 ? 1 : 0.15) : 1;
+        if (Math.random() < 6 * dt * pulse) {
+          const x = w.x * TS + Math.random() * w.w * TS, y = w.y * TS + Math.random() * w.h * TS;
+          if (!cam.inView(x, y, 20)) continue;
+          const wd = U.norm(w.dx, w.dy);
+          for (let i = 0; i < 5; i++) this.particles.add({ x: x - wd.x * i * 3, y: y - wd.y * i * 3 - 6, vx: wd.x * (w.force || 90) * 1.6, vy: wd.y * (w.force || 90) * 1.6, life: 0.45, color: i ? 'rgba(232,240,255,0.6)' : '#ffffff', drag: 0 });
+        }
+      }
     }
 
     checkZones() {
@@ -794,6 +904,7 @@
       const rest = drawList.filter((e) => e.layer >= 0).concat(this.players).sort((a, b) => (a.layer > 0 ? 1e5 : 0) + a.sortY - ((b.layer > 0 ? 1e5 : 0) + b.sortY));
       for (const e of ground) e.draw(w, cam, this);
       for (const e of rest) e.draw(w, cam, this);
+      for (const e of this.entities) if (e.drawBeam && !e.dead) e.drawBeam(w, cam, this);
       this.particles.draw(w, cam, false);
       // luz ambiente
       const def = this.level.def;
