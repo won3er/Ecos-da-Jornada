@@ -25,7 +25,7 @@
   };
 
   S.defaultSettings = () => ({
-    music: 0.55, sfx: 0.8, shake: true, solo: false, showFps: false, assist: false,
+    music: 0.55, sfx: 0.8, shake: true, solo: false, showFps: false, assist: false, lang: 'en',
   });
   S.loadSettings = function () {
     let json = null;

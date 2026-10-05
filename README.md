@@ -42,6 +42,12 @@ Dicas:
 
 ---
 
+## Idiomas / Languages
+
+O jogo abre em **inglês** por padrão. Para trocar: **Configurações → Idioma / Language** (inglês ou português). A escolha fica salva.
+
+The game starts in **English** by default. To switch: **Settings → Idioma / Language** (English or Portuguese). Your choice is saved.
+
 ## 2. Controles
 
 | Ação | Jogador 1 — Lirien | Jogador 2 — Aldren |

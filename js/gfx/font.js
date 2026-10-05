@@ -123,14 +123,16 @@
     if (ALIAS[ch] && glyphs[ALIAS[ch]]) return glyphs[ALIAS[ch]];
     return glyphs['?'];
   }
+  const T = (s) => (G.T ? G.T(s) : s);
   F.measure = function (str, scale = 1) {
+    str = T(str);
     let w = 0;
     for (const ch of String(str)) w += glyph(ch).w + 1;
     return Math.max(0, w - 1) * scale;
   };
   // y = topo das maiúsculas
   F.draw = function (ctx, str, x, y, color = '#fff', opts = {}) {
-    str = String(str);
+    str = T(String(str));
     const scale = opts.scale || 1;
     if (opts.align === 'center') x -= Math.floor(F.measure(str, scale) / 2);
     else if (opts.align === 'right') x -= F.measure(str, scale);
@@ -153,12 +155,13 @@
     return cx - x;
   };
   F.drawWrapped = function (ctx, str, x, y, maxW, color, opts = {}) {
+    str = T(str);
     const lines = U.wrapText(str, maxW, (s) => F.measure(s, opts.scale || 1));
     const lh = opts.lineHeight || F.LINE;
     lines.forEach((l, i) => F.draw(ctx, l, x, y + i * lh, color, opts));
     return lines.length;
   };
-  F.wrap = (str, maxW, scale = 1) => U.wrapText(str, maxW, (s) => F.measure(s, scale));
+  F.wrap = (str, maxW, scale = 1) => U.wrapText(T(str), maxW, (s) => F.measure(s, scale));
 
   G.Font = F;
 })();

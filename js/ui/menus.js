@@ -417,6 +417,7 @@
     items(g) {
       const s = g.settings;
       return [
+        { label: 'Idioma / Language', value: (G.I18n.LANGS.find((l) => l.id === G.I18n.lang) || {}).name, adj: (d) => { const L = G.I18n.LANGS, i = L.findIndex((l) => l.id === G.I18n.lang); const n = L[(i + (d < 0 ? L.length - 1 : 1)) % L.length]; s.lang = n.id; G.I18n.set(n.id); G.Save.saveSettings(s); } },
         { label: 'Música', value: Math.round(s.music * 10) + '/10', adj: (d) => { s.music = U.clamp(Math.round((s.music + d * 0.1) * 10) / 10, 0, 1); G.Audio.setVolume('music', s.music); } },
         { label: 'Efeitos', value: Math.round(s.sfx * 10) + '/10', adj: (d) => { s.sfx = U.clamp(Math.round((s.sfx + d * 0.1) * 10) / 10, 0, 1); G.Audio.setVolume('sfx', s.sfx); G.Audio.sfx('ui'); } },
         { label: 'Tremor de tela', value: s.shake ? 'Sim' : 'Não', adj: () => { s.shake = !s.shake; } },
@@ -438,16 +439,16 @@
     }
     draw(ctx, g) {
       dim(ctx, 0.6);
-      const w = 260, h = 150, x = (W() - w) / 2, y = (H() - h) / 2;
+      const w = 260, h = 164, x = (W() - w) / 2, y = (H() - h) / 2;
       UI().panel(ctx, x, y, w, h);
       UI().title(ctx, 'CONFIGURAÇÕES', W() / 2, y + 8);
       this.items(g).forEach((it, i) => {
         const yy = y + 28 + i * 14;
         if (i === this.sel) { ctx.fillStyle = UI().COL.sel; ctx.fillRect(x + 8, yy - 3, w - 16, 13); }
         F().draw(ctx, it.label, x + 16, yy, i === this.sel ? '#fff' : '#ece6f6', { shadow: true });
-        if (it.value) F().draw(ctx, (i === this.sel && it.adj ? '◀ ' : '') + it.value + (i === this.sel && it.adj ? ' ▶' : ''), x + w - 16, yy, '#f2d98c', { align: 'right', shadow: true });
+        if (it.value) F().draw(ctx, (i === this.sel && it.adj ? '◀ ' : '') + G.T(it.value) + (i === this.sel && it.adj ? ' ▶' : ''), x + w - 16, yy, '#f2d98c', { align: 'right', shadow: true });
       });
-      const tip = ['', '', '', 'Um jogador controla os dois. O outro personagem segue e ajuda.', 'Menos dano recebido e mais tempo para reviver.', '', '', ''][this.sel];
+      const tip = ['', '', '', '', 'Um jogador controla os dois. O outro personagem segue e ajuda.', 'Menos dano recebido e mais tempo para reviver.', '', '', ''][this.sel];
       if (tip) F().drawWrapped(ctx, tip, W() / 2 - 120, y + h + 6, 240, '#8a84a8', { shadow: true });
     }
   }

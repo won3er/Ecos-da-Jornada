@@ -34,7 +34,7 @@
   class Dialogue {
     constructor() { this.active = false; this.lines = []; this.i = 0; this.shown = 0; this.opts = {}; this.blipT = 0; this.cooldown = 0; }
     start(lines, opts = {}) {
-      this.lines = lines.slice();
+      this.lines = lines.map((l) => (l && typeof l.text === 'string' ? Object.assign({}, l, { text: G.T(l.text) }) : l));
       this.i = 0; this.shown = 0; this.opts = opts;
       this.active = true;
       this.cooldown = 0.15;
