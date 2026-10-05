@@ -19,7 +19,7 @@
       let x = 0, y = 0;
       for (const p of ps) { x += p.x; y += p.y - 8; }
       x /= ps.length; y /= ps.length;
-      if (this.extra) { x = x * 0.72 + this.extra.x * 0.28; y = y * 0.72 + this.extra.y * 0.28; }
+      if (this.extra) { const k = this.extra.w || 0.28; x = x * (1 - k) + this.extra.x * k; y = y * (1 - k) + this.extra.y * k; }
       return { x, y };
     }
     clampPos(cx, cy) {

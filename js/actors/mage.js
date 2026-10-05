@@ -8,6 +8,8 @@
     frost: { name: 'Geada', icon: 'frost', desc: 'Congela inimigos e água ao redor.' },
     tk: { name: 'Telecinese', icon: 'tk', desc: 'Segure: move pedras rúnicas e revela ilusões.' },
     bridge: { name: 'Ponte Etérea', icon: 'bridge', desc: 'Segure: cria uma ponte de luz à frente.' },
+    fire: { name: 'Chama Estelar', icon: 'fire', desc: 'Bola de fogo: acende, derrete gelo e queima.' },
+    stasis: { name: 'Estase', icon: 'stasis', desc: 'Bolha que desacelera o tempo ao redor.' },
   };
 
   class Mage extends G.Character {
@@ -23,10 +25,12 @@
       this.spellFlash = 0;
     }
     static get SPELLS() { return SPELLS; }
+    get sortY() { return this.carried ? this.y + 2 : this.y; }
 
     spells(g) { return g.unlockedSpells.filter((s) => SPELLS[s]); }
 
     cancelActions(g) {
+      if (this.carried) { const al = this.partner(g); if (al && al.carrying === this) al.carrying = null; if (al && al.state === 'carry') al.state = 'normal'; this.carried = false; this.z = 0; }
       this.dropTK(g);
       this.endBridge(g, true);
       if (this.ritual) this.stopRitual(g);
@@ -45,7 +49,35 @@
       if (s === 'dodge') { if (this.stateT > 0.16) this.state = 'normal'; return; }
       if (s === 'ritual') return this.stRitual(dt, g, inp);
       if (s === 'special') return this.stSpecial(dt, g, inp);
+      if (s === 'carried') return this.stCarried(dt, g, inp);
       this.state = 'normal';
+    }
+
+    // ------------------------------------------------ carregada pelo Aldren ("torre viva")
+    stCarried(dt, g, inp) {
+      this.moving = false;
+      const al = this.partner(g);
+      if (!al || al.carrying !== this || al.isDown) { this.hopOff(g); return; }
+      if (inp.act.pressed) { this.hopOff(g, true); return; }
+      if (inp.swap.pressed) {
+        const list = this.spells(g); const i = list.indexOf(this.spell);
+        this.spell = list[(i + 1) % list.length]; this.spellFlash = 1.2; G.Audio.sfx('ui');
+      }
+      // mira para onde o Aldren olha (ou para a direção apertada)
+      if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) this.setDir(inp.mx, inp.my);
+      if (inp.attack.pressed) { this.fireBolt(g); this.castAnim = 0.2; }
+      if (inp.skill.pressed && (this.spell === 'frost' || this.spell === 'fire' || this.spell === 'stasis')) {
+        const st = this.state; this.castSpell(g, inp); this.state = st;
+      }
+    }
+    hopOff(g, voluntary) {
+      const al = this.partner(g);
+      if (al && al.carrying === this) { al.carrying = null; if (al.state === 'carry') { al.state = 'normal'; al.stateT = 0; } }
+      this.carried = false; this.z = 0;
+      this.state = 'normal'; this.stateT = 0;
+      if (al) { this.x = al.x + al.fx * 10; this.y = al.y + al.fy * 8 + 1; }
+      g.unstick(this);
+      if (voluntary) G.Audio.sfx('land');
     }
 
     trySpecial(g, inp) {
@@ -130,7 +162,7 @@
         const dx = Math.cos(ang), dy = Math.sin(ang);
         g.addEntity(new G.Combat.Projectile({
           x: this.x + dx * 6, y: this.y + dy * 4 + 2, vx: dx * 230, vy: dy * 230, team: 'player', owner: this,
-          dmg: g.stat('lirien', 'magic'), kind: 'bolt', color: '#8ae8ff', color2: '#ffffff', life: 0.9, height: 12, r: 3, kb: 50,
+          dmg: g.stat('lirien', 'magic'), kind: 'bolt', color: '#8ae8ff', color2: '#ffffff', life: 0.9, height: 12, r: 3, kb: 50, lift: this.z || 0,
         }));
       };
       const base = Math.atan2(a.y, a.x);
@@ -160,6 +192,16 @@
         this.state = 'tk'; this.stateT = 0;
         this.tkTarget = this.findTK(g);
         if (this.tkTarget) { this.tkTarget.lift(g); G.Audio.sfx('crystal'); }
+      } else if (this.spell === 'fire') {
+        if (this.mp < 20) return this.noMana(g);
+        this.mp -= 20;
+        this.state = 'cast'; this.stateT = 0; this.castAnim = 0.3;
+        this.fireball(g);
+      } else if (this.spell === 'stasis') {
+        if (this.mp < 35) return this.noMana(g);
+        this.mp -= 35;
+        this.state = 'cast'; this.stateT = 0; this.castAnim = 0.35;
+        this.stasis(g);
       } else if (this.spell === 'bridge') {
         if (this.mp < 6) return this.noMana(g);
         this.state = 'bridge'; this.stateT = 0; this.bridgeT = 0;
@@ -192,6 +234,29 @@
       }
       if (froze && !g.flag('tut_ice')) { g.setFlag('tut_ice', true); g.toast('O gelo derrete em alguns segundos. Atravessem juntos!', 3.5); }
       g.camera.shake(1.5, 0.2);
+    }
+
+    // ------------------------------------------------ Chama Estelar
+    fireball(g) {
+      const a = this.aim(g);
+      const big = g.has('chama_viva');
+      g.addEntity(new G.Combat.Projectile({
+        x: this.x + a.x * 6, y: this.y + a.y * 4 + 2, vx: a.x * 190, vy: a.y * 190, team: 'player', owner: this,
+        dmg: g.stat('lirien', 'magic') * 1.6, kind: 'fire', color: '#ff8a3a', color2: '#ffe680', life: 1.1, height: 12, r: 5,
+        size: 3, light: 60, kb: 60, burn: big ? 4.5 : 3, lift: this.z || 0,
+      }));
+      G.Audio.sfx('fire');
+      g.camera.shake(1, 0.1);
+    }
+
+    // ------------------------------------------------ Estase (bolha de tempo lento)
+    stasis(g) {
+      for (const e of g.entities) if (e instanceof G.ObjectTypes.stasis && !e.dead) e.dead = true;
+      const d = 34;
+      const bx = this.x + this.fx * d, by = this.y + this.fy * d;
+      g.addEntity(new G.ObjectTypes.stasis({ x: bx, y: by, r: g.has('estase_longa') ? 62 : 52, life: g.has('estase_longa') ? 6 : 4.5 }));
+      G.Audio.sfx('stasis');
+      g.particles.ring(bx, by - 6, 4, 50, 0.5, '#c8f0ff', 2);
     }
 
     // ------------------------------------------------ Telecinese
@@ -291,24 +356,21 @@
       const n = U.norm(mx, my);
       const dist = g.has('passo_etereo') ? 64 : 44;
       const from = { x: this.x, y: this.y };
-      // procura o ponto mais distante livre
+      // Varre o caminho e para no PRIMEIRO obstáculo: paredes, cercas, rochas,
+      // portões, barreiras, caixotes, água e abismos. O teleporte é curto e
+      // nunca atravessa nada sólido (antes dava para pular portões e chefes).
       let best = 0;
-      for (let d = 4; d <= dist; d += 4) {
-        const b = { x: this.x + n.x * d - this.w / 2, y: this.y + n.y * d - this.h, w: this.w, h: this.h };
-        const tx = Math.floor((this.x + n.x * d) / TS), ty = Math.floor((this.y + n.y * d - 2) / TS);
-        if (g.level.isHole(tx, ty)) break; // não salta abismos/água
-        if (G.Physics.blocked(g, b, this)) continue;
-        const pt = this.partner(g);
-        if (pt && (Math.abs(this.x + n.x * d - pt.x) > G.VIEW_W - 40 || Math.abs(this.y + n.y * d - pt.y) > G.VIEW_H - 56)) break;
+      const pt = this.partner(g);
+      for (let d = 2; d <= dist; d += 2) {
+        const nx = this.x + n.x * d, ny = this.y + n.y * d;
+        const b = { x: nx - this.w / 2, y: ny - this.h, w: this.w, h: this.h };
+        if (G.Physics.blocked(g, b, this)) break;
+        const tx = Math.floor(nx / TS), ty = Math.floor((ny - 2) / TS);
+        if (g.level.isHole(tx, ty)) break;
+        if (pt && !g.noTether && (Math.abs(nx - pt.x) > G.VIEW_W - 40 || Math.abs(ny - pt.y) > G.VIEW_H - 56)) break;
         best = d;
       }
-      if (best < 8) return;
-      // não atravessa paredes: checa linha
-      for (let d = 4; d < best; d += 4) {
-        const tx = Math.floor((this.x + n.x * d) / TS), ty = Math.floor((this.y + n.y * d - 2) / TS);
-        if (G.Tiles.def(g.level.tile(tx, ty)).tall) { best = d - 4; break; }
-      }
-      if (best < 8) return;
+      if (best < 8) { this.cooldowns.blink = 0.2; return; }
       this.x += n.x * best; this.y += n.y * best;
       this.setDir(n.x, n.y);
       this.state = 'dodge'; this.stateT = 0;
@@ -339,8 +401,8 @@
       this.moving = false;
       this.invuln = Math.max(this.invuln, 0.1);
       this.specialT += dt;
-      const shots = 12;
-      const fired = Math.floor(this.stateT / 0.09);
+      const shots = g.has('tempestade_maior') ? 24 : 12;
+      const fired = Math.floor(this.stateT / (shots > 12 ? 0.05 : 0.09));
       while (this._fired === undefined || this._fired < Math.min(fired, shots)) {
         this._fired = (this._fired || 0) + 1;
         const a = Math.random() * 6.28;
@@ -351,13 +413,13 @@
         }));
         G.Audio.sfx('bolt');
       }
-      if (this.stateT > shots * 0.09 + 0.2) { this.state = 'normal'; this._fired = undefined; }
+      if (this.stateT > shots * (shots > 12 ? 0.05 : 0.09) + 0.2) { this.state = 'normal'; this._fired = undefined; }
     }
 
     // ------------------------------------------------ desenho
     drawStaff(ctx, x, y, g) {
       const o = this.staffOff();
-      const raised = this.castAnim > 0 || this.state === 'tk' || this.state === 'bridge' || this.state === 'ritual' || this.state === 'special' || this.state === 'charge';
+      const raised = this.castAnim > 0 || this.state === 'tk' || this.state === 'bridge' || this.state === 'ritual' || this.state === 'special' || this.state === 'charge' || this.state === 'carried';
       const sx = x + o.x, top = y - (raised ? 27 : 23), bot = y - (raised ? 6 : 3);
       ctx.fillStyle = '#3a2416'; ctx.fillRect(sx - 1, top, 3, bot - top);
       ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, top, 1, bot - top);

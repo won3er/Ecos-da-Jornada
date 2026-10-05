@@ -61,7 +61,7 @@
       if (g) g.particles.burst(this.x, this.y - 10, 8, { colors: ['#7aff8a', '#ffffff'], speed: 25, life: 0.6, up: 20, glow: true });
     }
     restore(n) { this.mp = Math.min(this.maxMp, this.mp + n); this.st = Math.min(this.maxSt, this.st + n); }
-    addSpecial(n) { this.special = Math.min(100, this.special + n); }
+    addSpecial(n) { const g = G.game; if (g && g.inv && g.inv.has('eco_unido')) n *= 1.5; this.special = Math.min(100, this.special + n); }
 
     setDir(x, y) {
       if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
@@ -92,11 +92,28 @@
       this.invuln = Math.max(0, this.invuln - dt);
       this.flash = Math.max(0, this.flash - dt);
       this.tethered = Math.max(0, (this.tethered || 0) - dt);
+      this.chillT = Math.max(0, (this.chillT || 0) - dt);
+      this.speedMul = this.chillT > 0 ? 0.6 : 1;
       for (const k in this.cooldowns) this.cooldowns[k] = Math.max(0, this.cooldowns[k] - dt);
       if (this.bubbleText) { this.bubbleText.t -= dt; if (this.bubbleText.t <= 0) this.bubbleText = null; }
 
       if (this.state === 'down') { this.updateDown(dt, g); return; }
       if (this.state === 'fall') { this.updateFall(dt, g); return; }
+      if (this.state === 'flight') { this.updateFlight(dt, g); return; }
+      // preso no gelo (Parada do Tempo): o parceiro quebra segurando interagir
+      if (this.frozenSolid > 0) {
+        this.frozenSolid -= dt; this.moving = false;
+        if (Math.random() < 0.1) g.particles.add({ x: this.x + U.rand(-6, 6), y: this.y - U.rand(4, 20), vy: -6, life: 0.6, color: '#e8faff' });
+        if (this.frozenSolid <= 0) this.breakIce(g);
+        return;
+      }
+
+      // vigia anti-travamento: se algo sólido "nasceu" em cima do personagem
+      // (portão fechando, caixote, cena), ele é empurrado para o espaço livre
+      if (!g.co.blocking && !this.carried && G.Physics.blocked(g, this.box, this)) {
+        this.stuckT = (this.stuckT || 0) + dt;
+        if (this.stuckT > 0.15) { g.unstick(this); this.stuckT = 0; }
+      } else this.stuckT = 0;
 
       // regeneração
       this.regen(dt, g);
@@ -111,16 +128,22 @@
       const ci = locked ? BLANK : inp;
       this.updateState(dt, g, ci);
 
-      // reviver parceiro
+      // reviver parceiro / quebrar o gelo do parceiro
       const pt = this.partner(g);
+      if (!locked && pt && pt.frozenSolid > 0 && this.state === 'normal' && U.dist(this.x, this.y, pt.x, pt.y) < 26 && ci.act && ci.act.down) {
+        pt.frozenSolid -= dt * 5;
+        if (Math.random() < 0.6) g.particles.add({ x: pt.x + U.rand(-8, 8), y: pt.y - U.rand(2, 18), vy: -20, life: 0.4, color: '#c8f0ff' });
+        if (pt.frozenSolid <= 0) pt.breakIce(g);
+      }
       if (!locked && pt && pt.state === 'down' && this.state === 'normal' && U.dist(this.x, this.y, pt.x, pt.y) < 24 && ci.act && ci.act.down) {
-        pt.reviveP += dt;
+        const oath = this.kind === 'warrior' && g.has('juramento');
+        pt.reviveP += dt * (oath ? 2 : 1);
         if (Math.random() < 0.5) g.particles.add({ x: pt.x + U.rand(-8, 8), y: pt.y - U.rand(0, 10), vy: -20, life: 0.6, color: '#ffe8a0', glow: true });
-        if (pt.reviveP >= REVIVE_TIME) pt.revive(g, 0.45);
+        if (pt.reviveP >= REVIVE_TIME) pt.revive(g, oath ? 0.75 : 0.45);
       }
 
-      // queda em buracos (gelo derreteu / ponte sumiu)
-      if (!this.flying && this.state !== 'dodge') {
+      // queda em buracos (gelo derreteu / ponte sumiu / plataforma passou)
+      if (!this.flying && this.state !== 'dodge' && !this.carried) {
         const tx = Math.floor(this.x / G.TILE), ty = Math.floor((this.y - 2) / G.TILE);
         if (g.level.isHole(tx, ty)) this.startFall(g);
         else if (!g.level.dynAt(tx, ty)) {
@@ -146,18 +169,60 @@
       this.st = Math.min(this.maxSt, this.st + dt * g.stat(this.key, 'stRegen') * (busy ? 0.4 : 1));
     }
 
-    // movimento padrão
+    // movimento padrão (com gelo escorregadio: inércia e pouca tração)
     walk(dt, g, inp, mul = 1) {
       let mx = inp.mx || 0, my = inp.my || 0;
       const l = Math.hypot(mx, my);
       if (l > 1) { mx /= l; my /= l; }
+      const sp = this.baseSpeed() * mul * this.speedMul;
+      const slip = !this.flying && g.level.isSlip(this.x, this.y - 2) && !this.hasGrip(g);
+      if (slip) {
+        const tvx = l > 0.1 ? mx * sp * 1.1 : 0, tvy = l > 0.1 ? my * sp * 1.1 : 0;
+        const k = 1 - Math.exp(-(l > 0.1 ? 2.2 : 0.7) * dt);
+        this.svx = U.lerp(this.svx || 0, tvx, k); this.svy = U.lerp(this.svy || 0, tvy, k);
+        const r = this.tryMove(g, this.svx * dt, this.svy * dt);
+        if (r.hitX) this.svx = 0;
+        if (r.hitY) this.svy = 0;
+        if (l > 0.1) this.setDir(mx, my);
+        this.moving = l > 0.1 || Math.hypot(this.svx, this.svy) > 10;
+        if (this.moving && Math.random() < 0.15) g.particles.add({ x: this.x + U.rand(-3, 3), y: this.y, vy: -4, life: 0.3, color: '#e8f8ff', back: true });
+        return this.moving;
+      }
       this.moving = l > 0.1;
+      this.svx = this.moving ? mx * sp : 0; this.svy = this.moving ? my * sp : 0;
       if (this.moving) {
         this.setDir(mx, my);
-        const sp = this.baseSpeed() * mul * this.speedMul;
         this.tryMove(g, mx * sp * dt, my * sp * dt);
       }
       return this.moving;
+    }
+    hasGrip(g) { const eq = g.inv.equip[this.key] || {}; return eq.acc === 'botas_cravo'; }
+
+    // ---------------------------------------------------- voo (arremesso / salto)
+    // Vai de onde está até (tx, ty) num arco, ignorando o chão no caminho.
+    startFlight(g, tx, ty, dur, height, onLand) {
+      this.cancelActions(g);
+      this.flight = { fx: this.x, fy: this.y, tx, ty, dur, height, onLand };
+      this.state = 'flight'; this.stateT = 0;
+      this.invuln = Math.max(this.invuln, dur + 0.1);
+      this.setDir(tx - this.x, ty - this.y);
+    }
+    updateFlight(dt, g) {
+      const f = this.flight;
+      if (!f) { this.state = 'normal'; this.z = 0; return; }
+      const k = Math.min(1, this.stateT / f.dur);
+      this.x = U.lerp(f.fx, f.tx, k); this.y = U.lerp(f.fy, f.ty, k);
+      this.z = Math.sin(k * Math.PI) * f.height;
+      if (Math.random() < 0.6) g.particles.add({ x: this.x + U.rand(-3, 3), y: this.y - this.z - 8, life: 0.3, color: this.kind === 'mage' ? '#c8a8ff' : '#ffe680', glow: true });
+      if (k >= 1) {
+        this.z = 0; this.flight = null;
+        this.state = 'normal'; this.stateT = 0;
+        this.lastSafe = { x: this.x, y: this.y }; this.safeT = 0;
+        g.unstick(this);
+        G.Audio.sfx('land');
+        g.particles.burst(this.x, this.y, 10, { colors: ['#c8c0b0', '#ffffff'], speed: 40, life: 0.4 });
+        if (f.onLand) f.onLand(g, this);
+      }
     }
 
     updateState(dt, g, inp) {
@@ -169,11 +234,13 @@
       if (this.isDown) return 'dodged';
       if (this.invuln > 0 || this.state === 'dodge') return 'dodged';
       if (g.godMode) return 'dodged';
+      if (this.frozenSolid > 0) this.breakIce(g);
       let dmg = hit.dmg * (this.def.dmgTaken || 1) * (g.settings.assist ? 0.6 : 1);
       dmg *= g.stat(this.key, 'defense');
       dmg = Math.max(1, Math.round(dmg));
       this.hp -= dmg;
       this.flash = 0.15; this.invuln = 0.9; this.hurtT = 0.25;
+      if (hit.chill) { this.chillT = Math.max(this.chillT || 0, hit.chill); }
       if (hit.dir) { this.kvx = hit.dir.x * (hit.kb || 80); this.kvy = hit.dir.y * (hit.kb || 80); }
       g.particles.text(this.x, this.y - 28, dmg, '#ff6a6a');
       g.particles.burst(this.x, this.y - 10, 8, { color: '#ff6a6a', speed: 40, life: 0.4 });
@@ -187,23 +254,28 @@
     onHurt(g) {}
 
     goDown(g) {
-      this.hp = 0;
+      this.hp = 0; this.frozenSolid = 0;
       this.cancelActions(g);
       this.state = 'down'; this.stateT = 0;
       this.downT = DOWN_TIME * (g.settings.assist ? 1.5 : 1);
       this.reviveP = 0;
       G.Audio.sfx('down');
       g.camera.shake(3, 0.3);
-      g.onPlayerDown(this);
-      // Pluma da Fênix
+      // Pluma da Fênix: revive sozinho (e conta como "de pé" para o game over)
       if (g.inv.count('pluma') > 0) {
         g.inv.remove('pluma', 1);
+        this.plumaPending = true;
+        g.stats.downs++;
         g.co.start(function* () {
           yield G.Co.wait(0.8);
+          this.plumaPending = false;
+          if (this.state !== 'down') return;
           g.toast('A Pluma da Fênix brilhou!', 2.5);
           this.revive(g, 0.5);
-        }.bind(this), g, { blocking: false });
+        }.bind(this), g, { blocking: false, name: 'pluma' });
+        return;
       }
+      g.onPlayerDown(this);
     }
     updateDown(dt, g) {
       const pt = this.partner(g);
@@ -241,6 +313,11 @@
     }
 
     cancelActions(g) {}
+    breakIce(g) {
+      this.frozenSolid = 0; this.invuln = Math.max(this.invuln, 0.8);
+      G.Audio.sfx('shatter');
+      g.particles.burst(this.x, this.y - 10, 22, { colors: ['#c8f0ff', '#ffffff', '#8ac0e0'], speed: 70, life: 0.5 });
+    }
 
     // ---------------------------------------------------- interação
     findInteract(g) {
@@ -261,6 +338,7 @@
     // ---------------------------------------------------- desenho
     spriteSet(g) {
       if (this.young) return G.Sprites.kid;
+      if (this.talen) return G.Sprites.talen;
       return g.spriteFor(this.key);
     }
     frame() {
@@ -294,12 +372,17 @@
       const img = set[this.dir][this.frame()];
       const by = this.bob();
       if (this.invuln > 0 && this.state !== 'dodge' && Math.floor(this.invuln * 16) % 2 === 0 && this.hurtT <= 0 && this.invuln < 0.85) ctx.globalAlpha = 0.45;
-      this.drawBehind(ctx, x, y - by, g);
-      const ox = Math.round(x - img.width / 2), oy = Math.round(y - img.height + 1 - by - this.z);
+      const yz = y - by - Math.round(this.z || 0);
+      this.drawBehind(ctx, x, yz, g);
+      const ox = Math.round(x - img.width / 2), oy = Math.round(y - img.height + 1 - by - (this.z || 0));
       ctx.drawImage(img, ox, oy);
       if (this.flash > 0) ctx.drawImage(set[this.dir + '_white'][this.frame()], ox, oy);
-      this.drawFront(ctx, x, y - by, g);
+      this.drawFront(ctx, x, yz, g);
       ctx.globalAlpha = 1;
+      if (this.frozenSolid > 0) {
+        const ice = G.Props.iceShell();
+        ctx.drawImage(ice, Math.round(x - ice.width / 2), Math.round(y - ice.height + 2));
+      }
       this.hurtT = Math.max(0, this.hurtT - 1 / 60);
     }
     drawDown(ctx, x, y, set, g) {
@@ -324,6 +407,11 @@
         const key = pt ? G.Characters[pt.key].keys.act : 'L';
         G.Font.draw(ctx, `Segure [${key}] para reviver`, x, y - 36, '#ffe8a0', { align: 'center', shadow: true });
         return;
+      }
+      if (this.frozenSolid > 0) {
+        const pt = this.partner(g);
+        const key = pt ? G.Characters[pt.key].keys.act : 'L';
+        G.Font.draw(ctx, `Segure [${key}] para quebrar o gelo`, x, y - 40, '#c8f0ff', { align: 'center', shadow: true });
       }
       if (g.showIndicators && !g.inCutscene()) {
         const yy = y - 32 - (this.young ? -8 : 0);

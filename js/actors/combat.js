@@ -100,6 +100,7 @@
     update(dt, g) {
       this.t += dt;
       this.life -= dt;
+      if (this.lift > 0) this.lift = Math.max(0, this.lift - dt * 110);
       if (this.life <= 0) { this.die(g); return; }
       if (this.homing && this.team === 'player') {
         let best = null, bd = 160;
@@ -112,8 +113,11 @@
       this.x += this.vx * dt; this.y += this.vy * dt;
       // rastro
       if (this.trail && Math.random() < 0.8) g.particles.add({ x: this.x + U.rand(-1, 1), y: this.y - this.height + U.rand(-1, 1), vx: -this.vx * 0.1, vy: -this.vy * 0.1, life: 0.25, color: U.pick([this.color, this.color2]), glow: true, size: this.bigOrb ? 2 : 1 });
-      // paredes
-      if (g.level.blocksShot(this.x, this.y)) { this.die(g); return; }
+      // paredes (a Chama Estelar derrete gelo)
+      if (g.level.blocksShot(this.x, this.y)) {
+        if (this.kind === 'fire' && this.team === 'player') g.level.melt(Math.floor(this.x / 16), Math.floor(this.y / 16), g);
+        this.die(g); return;
+      }
       const px = this.x, py = this.y - this.height;
       // objetos sólidos que bloqueiam projéteis
       for (const e of g.solids) {
@@ -134,11 +138,12 @@
         for (const e of Combat.playerTargets(g)) {
           if (this.hitSet.has(e) || e.dead || e.blocksProjectiles) continue;
           if (this.kind === 'reflected_big' && !e.boss) continue;
+          if (this.onlyBoss && !e.boss) continue;
           if (e.flying === false && e.isEnemy && e.underground) continue;
           const hb = e.hurtBox;
           if (U.pointInRect(px, py, { x: hb.x - this.r, y: hb.y - this.r, w: hb.w + this.r * 2, h: hb.h + this.r * 2 })) {
             this.hitSet.add(e);
-            const hit = { dmg: this.dmg, kind: this.kind, src: this.owner, magic: true, dir: U.norm(this.vx, this.vy), kb: this.kb, stun: this.stun, proj: this };
+            const hit = { dmg: this.dmg, kind: this.kind, src: this.owner, magic: true, dir: U.norm(this.vx, this.vy), kb: this.kb, stun: this.stun, proj: this, burn: this.burn };
             let ok;
             if (e.isEnemy || e.isTarget) ok = e.takeHit(hit, g);
             else if (e.onHit) ok = e.onHit(this.kind, this.owner, g);
@@ -157,7 +162,7 @@
           const hb = p.hurtBox;
           if (U.pointInRect(px, py, { x: hb.x - this.r, y: hb.y - this.r, w: hb.w + this.r * 2, h: hb.h + this.r * 2 })) {
             this.hitSet.add(p);
-            const res = p.takeHit({ dmg: this.dmg, kind: 'proj', src: this.owner, dir: U.norm(this.vx, this.vy), kb: this.kb, proj: this }, g);
+            const res = p.takeHit({ dmg: this.dmg, kind: 'proj', src: this.owner, dir: U.norm(this.vx, this.vy), kb: this.kb, proj: this, chill: this.chill }, g);
             if (res === 'reflected') return;
             if (res !== 'dodged') { this.die(g); return; }
           }
@@ -178,10 +183,10 @@
       this.team = 'player'; this.owner = by;
       this.vx = -this.vx * 1.3; this.vy = -this.vy * 1.3;
       this.dmg *= mult; this.hitSet.clear(); this.life = 2;
-      this.kind = this.bigOrb ? 'reflected_big' : 'bolt';
+      this.kind = this.bigOrb ? 'reflected_big' : (this.onReflectKind || 'bolt');
       this.color = '#ffe680'; this.color2 = '#ffffff';
       this.homing = this.bigOrb ? 0 : 2;
-      if (this.bigOrb && g.boss) { const d = U.norm(g.boss.x - this.x, g.boss.y - 10 - this.y); const sp = Math.hypot(this.vx, this.vy); this.vx = d.x * sp; this.vy = d.y * sp; }
+      if ((this.bigOrb || this.onlyBoss) && g.boss && !g.boss.dead) { const d = U.norm(g.boss.x - this.x, g.boss.y - 10 - this.y); const sp = Math.hypot(this.vx, this.vy); this.vx = d.x * sp; this.vy = d.y * sp; this.homing = 0; }
     }
     die(g) {
       if (this.dead) return;
@@ -190,7 +195,7 @@
       if (this.onDie) this.onDie(g, this);
     }
     draw(ctx, cam, g) {
-      const x = Math.round(this.x - cam.rx), y = Math.round(this.y - this.height - cam.ry);
+      const x = Math.round(this.x - cam.rx), y = Math.round(this.y - this.height - (this.lift || 0) - cam.ry);
       ctx.globalAlpha = 0.3; P.ellipse(ctx, x, Math.round(this.y - cam.ry), this.bigOrb ? 6 : 2, 1, '#000'); ctx.globalAlpha = 1;
       const s = this.size;
       if (this.bigOrb) {
@@ -202,6 +207,14 @@
         const n = U.norm(this.vx, this.vy);
         P.line(ctx, x - n.x * 5, y - n.y * 5, x + n.x * 2, y + n.y * 2, '#c8b89a');
         ctx.fillStyle = '#e8e8f0'; ctx.fillRect(x + Math.round(n.x * 2), y + Math.round(n.y * 2), 1, 1);
+      } else if (this.kind === 'fire') {
+        const fl = Math.floor(this.t * 20) % 2;
+        P.circle(ctx, x, y, 4 + fl, '#c8401a'); P.circle(ctx, x, y, 3, '#ff8a3a'); P.circle(ctx, x - 1, y - 1, 2, '#ffe680');
+        if (Math.random() < 0.6) g.particles.add({ x: this.x + U.rand(-2, 2), y: this.y - this.height + U.rand(-2, 2), vy: -20, life: 0.3, color: U.pick(['#ff8a3a', '#ffd84a']), glow: true });
+      } else if (this.kind === 'icicle') {
+        const n = U.norm(this.vx, this.vy);
+        P.line(ctx, x - n.x * 5, y - n.y * 5, x + n.x * 3, y + n.y * 3, '#a8dcf4');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(x + Math.round(n.x * 3), y + Math.round(n.y * 3), 1, 1);
       } else if (this.kind === 'rock') {
         P.circle(ctx, x, y, 4, '#5a5450'); P.circle(ctx, x - 1, y - 1, 2, '#8a847a');
       } else {

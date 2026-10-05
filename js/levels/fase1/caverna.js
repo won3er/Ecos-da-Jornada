@@ -49,7 +49,7 @@ G.defineArea({
   zones: [
     { x: 6, y: 2, w: 1, h: 4, trigger: 'caverna_inicio' },
     { x: 16, y: 2, w: 1, h: 4, trigger: 'caverna_eco' },
-    { x: 32, y: 10, w: 1, h: 7, trigger: 'arena' },
+    { x: 32, y: 5, w: 16, h: 17, trigger: 'arena' }, // a sala inteira: não dá para contornar
   ],
   entities: [
     { type: 'decor', kind: 'stairs', tx: 2, ty: 2, sw: 1 }, { type: 'brazier', tx: 5, ty: 2, lit: true }, { type: 'brazier', tx: 21, ty: 2, lit: true },

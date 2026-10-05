@@ -63,6 +63,7 @@
       return d * m;
     }
     get stunned() { return this.dazedT > 0; }
+    phaseFloor() { return this.phase === 1 ? Math.floor(this.maxHp * 0.655) : this.phase === 2 ? Math.floor(this.maxHp * 0.325) : null; }
     stun() {}
     onParried(by, g) { if (this.state === 'swipe') { this.cd = 1.5; g.particles.text(this.x, this.y - 56, 'Recuou!', '#ffe680'); this.kvx = by.fx * 60; } }
 

@@ -1,14 +1,19 @@
-# Ecos da Jornada — Capítulo I: O Começo da Jornada
+# Ecos da Jornada
 
-Aventura cooperativa 2D em pixel art para **dois jogadores no mesmo computador**.
-É uma fatia vertical completa da Fase 1, jogável do começo ao fim, com:
+Aventura cooperativa 2D em pixel art para **dois jogadores no mesmo computador** (ou online por convite).
+O jogo está **completo**: três capítulos jogáveis do começo ao fim, com final, créditos e pós-jogo para chegar aos 100%.
 
-- menu;
-- vila (hub) e cinco regiões;
-- puzzles cooperativos;
-- memórias jogáveis;
-- mini-chefe e chefe final;
-- cenas, save e tela de fim de capítulo.
+| Capítulo | Regiões | Mini-chefe | Chefe |
+|---|---|---|---|
+| **I — O Começo da Jornada** | Vila de Brisaclara, Estrada do Moinho, Bosque Sussurrante, Ruínas de Velmora, Caverna Ecoante, Santuário da Estrela Caída | Guardião de Pedra | Morvath, o Devorador de Memórias |
+| **II — As Montanhas do Norte** | Trilha Gelada, Pedra-Alta, Minas de Cristal, Picos Gelados, Fortaleza da Vigília Branca, Sala do Trono | Grumak, o Urso-de-Geada | Ysveth, a Geada Eterna |
+| **III — A Última Estrela** | Velmora Desperta, Salão dos Espelhos, Jardins Suspensos, Câmara do Reflexo, Coração do Céu | Os Ecos | Nyxara, a Mãe das Estrelas |
+
+Elites opcionais: **Lobo Cinzento** (Cap. I), **Lobo Alfa da Nevasca** (Cap. II) e **Sentinela Antiga** (Cap. III).
+
+- **8 memórias** (4 jogáveis), **9 missões secundárias**, 17 colecionáveis (páginas, diário, constelações) e 13 áreas secretas.
+- **5 magias** para a Lirien e **5 técnicas** para o Aldren, árvore com **20 habilidades**, forja até o nível 5.
+- **Viagem rápida** entre Pedras de Retorno, **bestiário** e **% de conclusão** no Diário.
 
 > **Sobre os personagens:** o briefing pedia Frieren e Himmel. Como são personagens protegidos, o jogo usa uma dupla **original** com os mesmos papéis:
 > - **Lirien**: maga élfica que vive há séculos;
@@ -47,6 +52,7 @@ Dicas:
 | Esquiva / interagir | **L** — teleporte curto / falar / abrir / reviver | **3** — investida / falar / alavancas / agarrar caixote / segurar inimigo tonto |
 | Extra | **I** — troca de magia | **4** — provocar (os inimigos focam nele) |
 | Especial (barra dourada cheia) | **J + K** — Tempestade Arcana | **1 + 2** — Corte do Herói |
+| Técnicas do Cap. II/III | — | **3 perto da Lirien**: erguer → **3** de novo: **arremessar** • **3 na beira de um vão curto**: **Salto do Herói** |
 
 Teclas gerais:
 - **Esc / P**: pausa.
@@ -70,185 +76,152 @@ Teclas gerais:
 
 ## 3. Mecânicas principais
 
+### Magias e técnicas (como se ganham)
+
+| Personagem | Habilidade | Onde |
+|---|---|---|
+| Lirien | Geada, Telecinese | desde o início |
+| Lirien | **Ponte Etérea** (segure: ponte de luz sobre abismos) | memória "A Primeira Ponte" (Cap. I) |
+| Lirien | **Chama Estelar** (acende, derrete gelo, queima espinhos/teias, liberta congelados) | memória "A Primeira Neve" (Cap. II) |
+| Lirien | **Estase** (bolha que desacelera inimigos, projéteis, meteoros e plataformas) | vitória sobre Ysveth (fim do Cap. II) |
+| Aldren | **Reflexão** (aparar devolve projéteis) | vitória sobre o Guardião de Pedra (Cap. I) |
+| Aldren | **Arremesso** (ergue a Lirien e a lança por cima de muros baixos, cercas, água e abismos) | vitória sobre Grumak (Cap. II) |
+| Aldren | **Salto do Herói** (pula vãos curtos de abismo ou água) | memória "A Queda de Velmora" (Cap. III) |
+
 ### Cooperação ("só avanço porque você fez algo")
 
 | Situação | Lirien faz | Aldren faz |
 |---|---|---|
 | Rocha rachada | magia não racha pedra | golpe pesado quebra |
 | Selo arcano roxo | magia carregada quebra | espada não funciona |
-| Rio | Geada congela a água por alguns segundos; os dois atravessam juntos | — |
-| Portão dos Gêmeos | acerta o cristal | puxa a alavanca |
-| Ponte de luz + alavanca (ruínas) | segura a Ponte Etérea e não pode andar | atravessa e puxa a alavanca que ergue a ponte de pedra |
+| Rio | Geada congela a água; os dois atravessam juntos | — |
+| Portão dos Gêmeos | acerta o cristal | puxa a alavanca no mesmo instante |
+| Ponte de luz + alavanca | segura a Ponte Etérea | atravessa e puxa a alavanca |
 | Ritual do altar | canaliza e fica indefesa | protege com escudo e provocação |
-| Placa pesada | "leve demais" | o peso dele, ou um caixote empurrado por ele, aciona |
-| Pedra rúnica (caverna) | leva a pedra sobre o abismo com Telecinese | quebra a barricada antes |
-| Ilha do Peso (santuário) | cria a ponte | pisa na placa |
-| Cristal Solar | atira no escudo erguido do Aldren → **Prisma** | ergue o escudo |
-| Inimigos | Fogos-fátuos são imunes à espada | Besouros de pedra refletem magia até ele virá-los |
-
-Quando o Portão dos Gêmeos abre de vez, o puzzle fica resolvido. O Cristal Solar só desperta com luz refletida (o Prisma).
+| Placa pesada | "leve demais" | o peso dele (ou um caixote) aciona |
+| Cristal Solar | atira no escudo erguido → **Prisma** | ergue o escudo |
+| Gelo azul, espinhos, teias, braseiros que "pedem fogo" | **Chama Estelar** | — |
+| Moradores presos no gelo do tempo (Pedra-Alta) | Chama Estelar liberta | — |
+| **Vento forte** (Picos) | é empurrada (leve); anda **atrás do escudo** | escudo erguido contra o vento = abrigo |
+| **Muro baixo / abismo com runa** | lê a runa (só ela) | **arremessa** a Lirien por cima |
+| Três braseiros ao mesmo tempo (Fortaleza) | acende rápido, com teleporte | protege |
+| **Feixes de luz** (Torre) | magia concentrada liga os emissores | **gira os espelhos** e usa o **escudo como espelho** |
+| **Plataformas flutuantes** | **Estase** deixa as plataformas lentas | — |
+| Vãos curtos | — | **Salto do Herói** |
+| Inimigos | Fogos-fátuos e espíritos de gelo são imunes à espada | Besouros e cavaleiros: golpe pesado quebra a guarda |
 
 ### Combos em dupla
 
 Cada combo mostra um texto dourado e enche a barra especial dos dois.
 
-- **ABERTURA!** — Aldren atordoa com o golpe pesado; a magia carregada da Lirien causa 2,5× o dano.
+- **ABERTURA!** — golpe pesado atordoa; a magia carregada causa 2,5× o dano.
 - **PRISÃO!** — Aldren segura um inimigo atordoado (tecla 3); a magia causa 2× o dano.
 - **ESTILHAÇO!** — a Geada congela; o golpe pesado estilhaça (3×).
+- **CHOQUE TÉRMICO!** — a Chama Estelar num inimigo congelado (2,5×).
 - **PRISMA!** — o projétil da Lirien bate no escudo erguido e vira um leque de 3 disparos.
-- **UNIÃO!** — os dois especiais ativados juntos geram uma explosão extra.
+- **METEORO!** — a Lirien arremessada cai em cima de inimigos.
+- **CONTRA-ATAQUE!** — com a habilidade, o golpe logo depois de aparar causa 3×.
+- **UNIÃO!** — os dois especiais ativados juntos geram uma explosão extra (e selam a chefe final).
 
 ### Morte, reviver e checkpoints
 
-- Ao cair, o personagem fica no chão com um **cronômetro de 12 s**. O parceiro **segura o botão de interagir** perto dele para reviver.
+- Ao cair, o personagem fica no chão com um **cronômetro de 12 s**. O parceiro **segura interagir** perto dele para reviver (e também para **quebrar o gelo** se ele for congelado).
 - Se os dois caírem (ou o tempo acabar), vocês voltam à última **Pedra de Retorno**.
-- As Pedras de Retorno ficam antes das áreas importantes e dos chefes. Elas curam, salvam o jogo e permitem **meditar** (gastar pontos de habilidade).
-- A **Pluma da Fênix** (vendida na loja) revive automaticamente.
+- As Pedras de Retorno curam, salvam, permitem **meditar** (gastar pontos) e **viajar** para qualquer outra Pedra já ativada.
+- A **Pluma da Fênix** revive automaticamente.
 
 ### Memórias (mecânica central)
 
-Objetos com brilho dourado despertam lembranças. A tela fica em sépia e aparece **"MEMÓRIA — DOZE ANOS ATRÁS"**. Lirien aparece igual (elfos não envelhecem) e Aldren aparece criança.
+Objetos com brilho dourado despertam lembranças em sépia. O que se aprende nelas resolve o presente.
 
-1. **A Primeira Ponte** (ruínas, jogável): Lirien ensina a Ponte Etérea ao pequeno Aldren.
-   - Ao voltar ao presente, a magia é desbloqueada e resolve o abismo das ruínas.
-   - Aldren recupera a espada de madeira.
-2. **A Fita no Galho** (bosque secreto): cena curta e opcional.
-3. **A Promessa** (depois do chefe, jogável): a colina e a chuva de estrelas. Fecha o arco emocional.
+| Memória | Tipo | Onde |
+|---|---|---|
+| A Primeira Ponte | jogável (ensina a Ponte Etérea) | Ruínas de Velmora |
+| A Fita no Galho | cena | Bosque (área secreta) |
+| A Promessa | jogável | Cratera, depois do chefe |
+| A Primeira Neve | jogável (ensina a Chama Estelar) | Trilha Gelada |
+| O Boneco de Neve | cena | Pedra-Alta |
+| O Aniversário | cena | depois de Ysveth |
+| A Queda de Velmora | jogável com **Sir Talen** (ensina o Salto) | Velmora Desperta |
+| O Jardim do Mestre | cena | Jardins Suspensos |
 
 ### Chefes
 
-**Guardião de Pedra** (mini-chefe):
-- É blindado.
-- O núcleo só fica exposto se Aldren **aparar** o esmagamento no instante exato, ou se o golem bater numa parede durante a investida.
-- Na fase 2 ganha fúria e chuva de pedras.
-- **Recompensa:** Aldren aprende **Reflexão** (aparar devolve projéteis).
-
-**Morvath, o Devorador de Memórias** (chefe):
-
-| Fase | O que acontece |
+| Chefe | Como vencer |
 |---|---|
-| 1 | Um véu prismático que só cai com magia concentrada ou Prisma. Morvath cai tonto e é a vez da espada. |
-| 2 | Fica intangível, invoca ecos sombrios da dupla e lança o **Orbe do Esquecimento**. Só ele, devolvido por Aldren com Reflexão, quebra a intangibilidade. |
-| 3 | Combina tudo, mais rápido, com zonas de névoa no chão. |
+| **Guardião de Pedra** | blindado; apare o esmagar ou faça-o bater na parede para expor o núcleo. |
+| **Morvath** | véu prismático (magia carregada/Prisma) → tonto; intangível na fase 2 até o **Orbe** ser devolvido com Reflexão; fase 3 combina tudo. |
+| **Grumak** | couraça de gelo: **Chama Estelar** derrete uma placa por vez; Aldren apara a patada, bloqueia o **sopro** (quem fica atrás do escudo não congela) e o faz bater nos pilares. |
+| **Ysveth** | 1) cópias de gelo: fogo quebra; Reflexão devolve as lanças. 2) **Parada do Tempo**: só quem está perto de um braseiro aceso escapa de congelar. 3) no trono, atrás de um muro de gelo: **arremessem a Lirien** até a ampulheta. |
+| **Os Ecos** | sombras da dupla; o elo os protege quando estão juntos — separem (provocação/Geada). |
+| **Nyxara** | 1) véu estelar; 2) **Raio do Fim**: o escudo do Aldren devolve o raio; 3) meteoros (Estase) e o núcleo na ilha (**Arremesso**); 4) **duas UNIÕES** (especiais ao mesmo tempo) a selam. |
 
-A luta tem introdução cinematográfica, padrões telegrafados, animação de derrota e recompensa.
+Os chefes não pulam fases com um golpe forte, e as arenas fecham só depois de puxar o parceiro para dentro.
 
 ---
 
 ## 4. O que foi implementado
 
-**Menus**
-- Tela inicial: Novo jogo, Continuar, Configurações, Controles, Sair.
-- Pausa: Continuar, Inventário, Habilidades, Diário, Configurações, Controles, Voltar ao menu.
+**Menus**: tela inicial (mostra o capítulo do save), pausa, inventário, habilidades, diário (missões, memórias, **bestiário**, **conclusão %**), configurações, controles, loja, forja, viagem rápida, fim de capítulo e **créditos**.
 
-**Vila de Brisaclara (hub)**
-- 9 NPCs com falas que mudam com o progresso.
-- Loja do Tobin e forja da Brunna (melhorias de espada e cajado).
-- Bonecos de treino e um santuário de braseiros (tutorial pelo cenário).
-- Segredos.
+**Hubs e lojas**: Brisaclara (Tobin, Brunna), Pedra-Alta (Yara, Hrolf) e o acampamento fantasma de Velmora (Cássio). A forja vai até o **nível 5** (moedas + Minério Estelar, Cristal Gélido, Núcleo Estelar).
 
-**Regiões**
-- Estrada do Moinho → Bosque Sussurrante → Ruínas de Velmora → Caverna Ecoante (escura, com iluminação dinâmica) → Santuário da Estrela Caída → Cratera (chefe).
+**Missões secundárias** (9): Ervas da Curandeira, O Lobo Cinzento, Páginas Perdidas, Gelo do Tempo, O Irmão de Nessa, O Alfa da Nevasca, O Diário de Hadrik, O Cajado do Mestre, As Sete Constelações.
 
-**Inimigos (7 tipos + elite)**
+**Inimigos**: gosma, lobo, morcego, esqueleto com escudo, arqueiro, fogo-fátuo, besouro de pedra, lobo da geada, gelídeo (explode em gelo), espírito da nevasca, morcego de cristal (rasante), aranha de cristal (teia), cavaleiro congelado (armadura de gelo), cavaleiro do vazio (teleporta), estrelinha cadente (explode), sentinela prismática (feixe refletível) e elites.
 
-| Tipo | Inimigo |
-|---|---|
-| Pequeno | gosma |
-| Rápido | lobo, morcego |
-| Resistente | esqueleto com escudo (bloqueia de frente) |
-| À distância | arqueiro |
-| Mágico | fogo-fátuo |
-| Cooperativo | besouro de pedra |
-| Elite | Lobo Cinzento, que chama a matilha |
+**Sistemas**: inventário com acessórios e 5 cosméticos; árvore de 20 habilidades (algumas despertam por capítulo); save automático; pós-jogo depois dos créditos.
 
-**Missões secundárias**
-- **Ervas da Curandeira:** 3 flores, uma delas na área secreta.
-- **O Lobo Cinzento.**
-- **Páginas Perdidas:** 5 páginas espalhadas, várias em segredos.
+**Áudio procedural**: 20 músicas com transição suave (vila, neve, minas, fortaleza, torre, vazio, chefes, chefe final, esperança...), ambientes (nevasca, minas, salões, vazio) e dezenas de efeitos.
 
-**Sistemas**
-- **Inventário** com categorias: consumíveis, equipamento, artefatos, coleção e missão.
-  - Acessórios equipáveis.
-  - Cosméticos que mudam a cor da capa ou do manto.
-- **Árvore de habilidades:** 5 nós por personagem. Os pontos são compartilhados, e a dupla decide junta.
-- **Diário:** missões, memórias e estatísticas (segredos 0/6, páginas, combos, revives).
-- **Save automático** em LocalStorage: fase, checkpoint, habilidades, itens, coleção, memórias, missões e flags dos puzzles.
-
-**Áudio procedural**
-- 10 músicas com **transição suave**: vila, exploração, floresta, masmorra, santuário, combate dinâmico, chefe, vitória, memória e derrota.
-- Ambientes: pássaros, gotas, vento e grilos.
-- Cerca de 50 efeitos sonoros.
-
-**Pixel art gerada por código**
-- Sprites com contorno.
-- Animações: andar, respirar, ataque, dano, queda, esquiva e especial.
-- Tiles com variação e transições.
-- Árvores, casas e objetos.
-- Partículas, luz dinâmica, raios de sol na floresta, filtro sépia nas memórias, tarjas de cinema e tremor de tela.
-
-**Câmera e interface**
-- A câmera enquadra os dois jogadores. Uma "coleira" impede que um abandone o outro fora da tela, e nas lutas de chefe ela também inclui o chefe.
-- HUD discreto:
-  - vida, mana/fôlego e especial;
-  - magia atual;
-  - moedas e missão ativa;
-  - barra do chefe;
-  - prompts de interação com a tecla de cada jogador;
-  - indicador P1/P2.
-- Conversas curtas durante a caminhada, em balões que não pausam o jogo.
-
-**Acessibilidade**
-- Modo assistido: menos dano recebido e mais tempo para reviver.
-- Modo solo com parceiro controlado pelo computador.
-- Volume e tremor de tela ajustáveis.
+**Modo solo melhorado**: a IA ataca chefes quando ficam vulneráveis, usa magia carregada, quebra o gelo, acompanha a UNIÃO e, ao trocar com Tab, **segura a posição** (ponte, escudo, placa, ritual) até você voltar.
 
 ---
 
-## 5. Testes realizados
+## 5. Correções desta versão (2.0)
 
-O jogo foi testado de forma automatizada num navegador, simulando o teclado. Foram verificados:
-- movimento, colisões e a coleira;
-- todos os ataques, habilidades e combos;
-- cada puzzle de cada área;
-- morte, reviver, derrota e retorno ao checkpoint;
-- as três memórias;
-- o mini-chefe (aparar → núcleo exposto) e o chefe (véu, fases, reflexão do orbe, derrota);
-- o final e a tela de fim de capítulo;
-- loja, ferreira, missões, inventário, árvore de habilidades e modo solo;
-- save e "Continuar".
-
-Também foram feitas:
-- uma checagem de **alcançabilidade** de todos os mapas: nenhuma saída, NPC ou baú inalcançável;
-- uma checagem de objetos em posições inválidas;
-- um teste de "caos", com entradas aleatórias em todas as áreas.
-
-Em todos esses testes, o jogo rodou sem erros e a 60 FPS.
+- **Atravessar paredes**: o teleporte da Lirien varria o caminho e "pulava" portões, cercas, barreiras e o portão da arena do Guardião. Agora para no primeiro obstáculo.
+- **Pular chefes**: dava para contornar os gatilhos das arenas e sair pelo portão. Os gatilhos cobrem a arena inteira, o parceiro é puxado para dentro antes da grade fechar e as saídas exigem o parceiro **do mesmo lado** (sem portão no meio).
+- **Movimento**: inimigos seguros pelo Aldren entravam nas paredes; personagens podiam ficar presos em portões que fechavam — há um vigia anti-travamento.
+- Trocar de área com 0 de vida, Pluma da Fênix perdendo para o game over, tremor de tela que ignorava a configuração e a IA que se teleportava através de portões.
 
 ---
 
-## 6. Estrutura de arquivos
+## 6. Testes realizados
+
+Testes automatizados no navegador (Chromium headless, Playwright):
+- regressão dos bugs acima (teleporte no portão, saída com parceiro atrás da grade, gatilho do chefe, parceiro puxado para a arena);
+- **alcançabilidade** de todas as 23 áreas (nenhum baú, NPC, runa ou saída inalcançável) e **bloqueio**: nenhuma saída "para frente" é alcançável sem resolver o quebra-cabeça ou vencer o chefe;
+- simulação de **todos os chefes novos** do começo ao fim (Grumak, Ysveth com as 3 fases e o arremesso, Os Ecos, Nyxara com as 4 fases e as duas UNIÕES) até o epílogo e os créditos;
+- quebra-cabeças com as mecânicas reais (derreter gelo, braseiros de fogo, descongelar moradores, arremessos, runas, espelhos e escudo-espelho, plataformas, salto);
+- transição entre capítulos, salvar/continuar e viagem rápida;
+- teste de **caos** com entradas aleatórias em todas as áreas, sem nenhum erro.
+
+---
+
+## 7. Estrutura de arquivos
 
 ```
 index.html              página do jogo (carrega os scripts na ordem)
 css/style.css
 assets/audio/           (vazio) coloque aqui músicas/efeitos reais, se quiser
 js/
-  core/      namespace, util, input (teclado+gamepad), audio, save, camera,
-             particles, lighting, coroutine (cutscenes)
-  gfx/       font (fonte bitmap com acentos), pixel, sprites (personagens/inimigos),
-             tiles (chão/paredes/água), props (árvores, casas, objetos)
-  data/      characters, items, skills, quests, dialogue   <- ponto de troca de IP
-  world/     entity (física), level (mapa), objects (puzzles), npc
-  actors/    combat (projéteis/dano), character (base), mage (Lirien),
-             warrior (Aldren), companion (IA do modo solo)
-  enemies/   enemy (base), types (comuns), golem (mini-chefe), boss (chefe)
-  systems/   dialogue, inventory, quests, progression, memory
+  core/      namespace, util, input (teclado+gamepad), audio, save, online,
+             camera, particles, lighting, coroutine (cutscenes)
+  gfx/       font, pixel, sprites (+sprites2), tiles, props (+props2), icons2
+  data/      characters, items, skills, quests, dialogue (+dialogue2), bestiary
+  world/     entity (física), level (mapa), objects (+objects2: gelo, feixes,
+             plataformas, runas...), npc
+  actors/    combat, character, mage (Lirien), warrior (Aldren), companion (IA)
+  enemies/   enemy, types (+types2), golem, boss, bosses2 (Grumak, Ysveth),
+             bosses3 (Ecos, Sentinela, Nyxara)
+  systems/   dialogue, inventory, quests, progression, memory, completion
   ui/        widgets, hud, menus
-  levels/    registry (registro + construtor de mapas)
-             fase1/ vila, estrada, floresta, ruinas, caverna, santuario (+cratera),
-                    memorias, cenas (cutscenes)
-  game.js    estados, áreas, renderização, save, morte, memórias
+  levels/    registry (registro + construtor de mapas + arenas)
+             fase1/ vila, estrada, floresta, ruinas, caverna, santuario, memorias, cenas
+             fase2/ trilha, pedra_alta, minas, picos, fortaleza, trono, memorias2, cenas2
+             fase3/ velmora, memorias3, torre, topo (Ecos, Nyxara, epílogo), cenas3
+  game.js    estados, capítulos, áreas, vento, Estase, renderização, save, memórias
   main.js    inicialização e laço de 60 Hz
 ```
 
@@ -256,67 +229,36 @@ São scripts clássicos com um namespace `G`, e não módulos ES. Assim o jogo r
 
 ---
 
-## 7. Trocar nomes, falas e arte (IP original)
+## 8. Trocar nomes, falas e arte (IP original)
 
 - **Nomes, atributos, cores e teclas:** `js/data/characters.js`.
-- **Todas as falas:** `js/data/dialogue.js` e `js/levels/fase1/cenas.js`.
-- **Memórias:** `js/systems/memory.js` e `js/levels/fase1/memorias.js`.
-- **Sprites:** `js/gfx/sprites.js`. As grades de texto mais a paleta são fáceis de redesenhar.
-- **Áudio real:** preencha `G.AudioFiles` no fim de `js/core/audio.js`, por exemplo:
-
-  ```js
-  G.AudioFiles.music.village = 'assets/audio/vila.ogg';
-  ```
-
-  O sistema troca o procedural pelo arquivo, mantendo as transições.
-
----
-
-## 8. Como adicionar as Fases 2 e 3
-
-1. Crie `js/levels/fase2/` com um arquivo por área. Cada área é um objeto `G.defineArea({...})`:
-   - **mapa:** usando `build(b)` com o `MapBuilder` (`rect`, `path`, `scatter`, `ellipse`, `frame`...), ou um array de strings em `map`;
-   - **dados:** `entities`, `spawns`, `exits`, `zones` (gatilhos), `triggers` e `scripts`.
-
-   Use `js/levels/fase1/ruinas.js` como modelo.
-2. Adicione os `<script>` novos em `index.html`, depois dos da fase 1.
-3. **Ligar as fases:** uma saída `{ to: 'montanha_entrada', spawn: 'sul' }` ou uma cena que chame `g.changeArea(...)`. O final da Fase 1 está em `G.Scenes.finale`, em `cenas.js`.
-4. **Novos inimigos:**
-   - crie uma classe que estende `G.Enemy` em `js/enemies/` e registre em `G.EnemyTypes`;
-   - para chefes, siga `golem.js` e `boss.js` (estados, fases, `takeHit`, `die` → script `bossDefeated` da área).
-5. **Novos objetos de puzzle:** estenda `G.Obj` em `world/objects.js` e registre em `G.ObjectTypes`.
-   - Sinais e portões já funcionam por `id`/`requires`; para lógica personalizada, use `mechanism`.
-6. **Novas habilidades:**
-   - magias da Lirien: adicione em `SPELLS` (`mage.js`) e desbloqueie com `g.unlockedSpells.push('nova')`;
-   - habilidades do Aldren: use `g.abilities.add('nome')` e verifique com `g.has('nome')`;
-   - para a árvore, adicione nós em `data/skills.js`.
-7. **Novas memórias:** registre em `G.MemoryDefs` e crie a área `mem_*`. O script `start` da área conduz a cena e chama `g.endMemory()`.
-
-Sugestões já previstas no roteiro:
-- **Fase 2**, *As Montanhas do Norte* (o fragmento estelar aponta para lá): fortaleza abandonada, nova magia para a Lirien (por exemplo, Chama Estelar) e nova técnica para o Aldren.
-- **Fase 3**: combinar as mecânicas das fases anteriores.
+- **Falas:** `js/data/dialogue.js`, `js/data/dialogue2.js` e os arquivos `cenas*.js`.
+- **Memórias:** `js/systems/memory.js` e os arquivos `memorias*.js`.
+- **Sprites:** `js/gfx/sprites.js` e `sprites2.js` (grades de texto + paleta).
+- **Áudio real:** preencha `G.AudioFiles` no fim de `js/core/audio.js`, por exemplo `G.AudioFiles.music.village = 'assets/audio/vila.ogg';`.
 
 ---
 
 ## 9. Limitações conhecidas
 
-- **Arte e música** são procedurais. A arte foi feita à mão em código, mas não tem a riqueza de um artista dedicado. O sistema aceita substituição por PNG e áudio reais.
+- **Arte e música** são procedurais (feitas em código). O sistema aceita substituição por PNG e áudio reais.
 - **Interiores** das casas não existem: as portas mostram uma descrição.
-- **Gamepad** segue o mapeamento padrão do navegador. Foi implementado, mas testado só por código, não com controles físicos.
+- **Gamepad** segue o mapeamento padrão do navegador; testado por código, não com controles físicos.
 - **Save** fica no LocalStorage do navegador. Limpar os dados do navegador apaga o progresso.
-- **Fases 2 e 3** ainda não existem. A arquitetura está pronta para elas (seção 8).
-- **Equilíbrio:** a dificuldade foi ajustada em testes automatizados. Pode precisar de ajuste fino com jogadores reais.
+- **Equilíbrio** ajustado em testes automatizados; pode pedir ajuste fino com jogadores reais (o **modo assistido** ajuda).
 
 ---
 
 ## Atalhos de desenvolvedor (console do navegador, F12)
 
 ```js
-G.dev.warp('ruinas')        // ir para uma área: vila, estrada, floresta, ruinas, caverna, santuario, cratera
+G.dev.warp('picos')         // ir para uma área (veja G.Areas)
+G.dev.chapter(3)            // começar direto num capítulo, com tudo desbloqueado
 G.dev.god()                 // invencibilidade on/off
-G.dev.unlockAll()           // Ponte Etérea + Reflexão
+G.dev.unlockAll()           // todas as magias e técnicas
 G.dev.give('pocao', 3)      // dar item
 G.dev.points(5)             // pontos de habilidade
+G.dev.complete()            // resumo da % de conclusão
 ```
 
 **F2** mostra as caixas de colisão e o FPS.

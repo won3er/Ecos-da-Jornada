@@ -93,7 +93,7 @@
         tx = bx + 56;
       }
       if (sp.name && ln.who !== 'sign') {
-        const col = sp.key === 'lirien' ? '#8ae8ff' : sp.key === 'aldren' || sp.key === 'kid' ? '#ffb89a' : '#f2d98c';
+        const col = sp.key === 'lirien' ? '#8ae8ff' : sp.key === 'aldren' || sp.key === 'kid' ? '#ffb89a' : sp.key === 'talen' ? '#9ab8ff' : sp.key === 'ysveth' ? '#c8f0ff' : sp.key === 'nyxara' ? '#e0c8ff' : '#f2d98c';
         F().draw(ctx, sp.name, tx, by + 8, col, { shadow: true });
       }
       const text = ln.text.slice(0, Math.floor(this.shown));

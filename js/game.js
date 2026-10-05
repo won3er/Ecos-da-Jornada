@@ -13,6 +13,7 @@
       this.wctx = this.world.getContext('2d');
       this.time = 0;
       this.settings = G.Save.loadSettings();
+      G.settings = this.settings; // usado pela câmera (tremor de tela)
       G.Input.solo = this.settings.solo;
       G.Audio.vol.music = this.settings.music; G.Audio.vol.sfx = this.settings.sfx;
       this.camera = new G.Camera();
@@ -63,6 +64,15 @@
       this.tauntT = 0;
       this.inMemory = null;
       this.present = null;
+      this.waystones = {};
+      this.bestiary = {};
+    }
+    // capítulo atual (derivado das flags da história)
+    get chapter() {
+      if (this.flag('game_complete')) return 4;
+      if (this.flag('chapter2_done')) return 3;
+      if (this.flag('chapter1_done')) return 2;
+      return 1;
     }
 
     // ============================================================ Estados
@@ -91,7 +101,38 @@
       this.refreshStats();
       for (const p of this.players) p.fullHeal(this);
       this.fade.a = 1; this.fade.target = 0;
+      // save antigo que terminou um capítulo mas não começou o próximo
+      const pend = this.pendingChapter();
+      if (pend) { this.startChapter(pend); return; }
       this.toast('Jornada retomada.', 2);
+    }
+    // depois dos créditos: o mundo continua aberto para chegar aos 100%
+    afterCredits() {
+      this.setFlag('game_complete', true);
+      this.setCheckpoint({ id: 'cp_vila_fim', area: 'vila', x: 23 * 16 + 8, y: 18 * 16 + 12 });
+      this.state = 'play';
+      this.inMemory = null; this.memBackup = null;
+      for (const p of this.players) { p.young = false; p.fullHeal(this); }
+      this.loadArea('vila', 'start');
+      this.save();
+      this.fade.a = 1; this.fade.target = 0;
+      G.Audio.playMusic('village', 2);
+      this.toast('A jornada terminou... mas o mundo continua. Explorem e cheguem aos 100%!', 6);
+    }
+    pendingChapter() {
+      if (this.flag('chapter1_done') && !this.flag('ch2_started')) return 2;
+      if (this.flag('chapter2_done') && !this.flag('ch3_started')) return 3;
+      return 0;
+    }
+    // começa um novo capítulo (chamado no fim do anterior ou ao continuar)
+    startChapter(n) {
+      this.state = 'play';
+      this.ui.clear(); this.co.clear(); this.dialogue.active = false;
+      if (!this.players.length) this.makePlayers();
+      this.setFlag('ch' + n + '_started', true);
+      const sc = G.Scenes['ch' + n + 'Intro'];
+      this.fade.a = 1; this.fade.target = 1;
+      if (sc) this.co.start(sc, this, { name: 'intro', persist: true });
     }
     toTitle() {
       this.state = 'title';
@@ -119,6 +160,7 @@
         checkpoint: this.checkpoint, flags: this.flags, inv: this.inv.serialize(), quests: this.quests.serialize(),
         prog: this.prog.serialize(), memories: [...this.memories], spells: this.unlockedSpells, abilities: [...this.abilities],
         gold: this.gold, stats: this.stats, playTime: this.playTime, savedAt: Date.now(),
+        waystones: this.waystones, bestiary: this.bestiary,
       };
     }
     loadSaveData(d) {
@@ -133,6 +175,8 @@
       this.stats = Object.assign({ kills: 0, combos: 0, downs: 0, revives: 0 }, d.stats || {});
       this.playTime = d.playTime || 0;
       this.checkpoint = d.checkpoint || null;
+      this.waystones = Object.assign({}, d.waystones || {});
+      this.bestiary = Object.assign({}, d.bestiary || {});
     }
     save() {
       if (this.inMemory || this.state !== 'play') return;
@@ -156,6 +200,9 @@
       const eq = this.inv.equip[key] || {};
       if (key === 'aldren' && eq.cosmetic === 'capa_cinzenta') return G.Sprites.recolor('aldren', { q: '#2e2e38', r: '#5a5a68', R: '#8a8a9a' });
       if (key === 'lirien' && eq.cosmetic === 'fita_estelar') return G.Sprites.recolor('lirien', { k: '#141434', g: '#26265a', G: '#4a4a96', y: '#e8e0ff', Y: '#ffffff' });
+      if (key === 'aldren' && eq.cosmetic === 'capa_neve') return G.Sprites.recolor('aldren', { q: '#8a96aa', r: '#c8d4e4', R: '#f2f6fb' });
+      if (key === 'aldren' && eq.cosmetic === 'capa_talen') return G.Sprites.recolor('aldren', { q: '#1a2a5a', r: '#2a4a8a', R: '#4a78c8' });
+      if (key === 'lirien' && eq.cosmetic === 'manto_aurora') return G.Sprites.recolor('lirien', { k: '#1a3a3a', g: '#2a7a6a', G: '#6ad8a8', y: '#ff9ad8', Y: '#ffd0f0' });
       return G.Sprites[key];
     }
     toast(text, t = 2.5) {
@@ -200,6 +247,8 @@
         this.camera.shake(5, 0.6);
         for (const pl of this.players) G.Combat.hitCircle(this, pl.x, pl.y - 8, 70, { dmg: 40, kind: 'special', src: pl, magic: true, stun: 2 });
         this.registerCombo('uniao');
+        this.lastSpecial = [0, 0];
+        if (this.boss && this.boss.onUnion) this.boss.onUnion(this);
       }
     }
     hitstop(t) { this.hitstopT = Math.max(this.hitstopT || 0, t); }
@@ -213,8 +262,15 @@
       return (this.inputCooldownT > 0) || this.dialogue.active || this.co.blocking || this.ui.open || this.transitioning || this.state !== 'play';
     }
     inCutscene() { return this.co.blocking || this.letter > 0.05; }
+    onThaw(id) {
+      this.quests.refresh(this);
+      const n = G.THAW_NPCS.filter((k) => this.flag('thaw_' + k)).length;
+      this.toast(`Morador libertado! (${n}/${G.THAW_NPCS.length})`, 2.5);
+    }
     onItemGained(id, n) {
       this.quests.refresh(this);
+      if (id === 'pagina_diario' && this.questState('diario') === 'inactive') this.startQuest('diario');
+      if (id === 'constelacao' && this.questState('constelacoes') === 'inactive') this.startQuest('constelacoes');
       if (id === 'pagina' && this.questState('paginas') === 'inactive') this.startQuest('paginas');
       if (id === 'pagina') this.quests.refresh(this);
     }
@@ -229,7 +285,9 @@
       const Cls = G.EnemyTypes[type];
       if (!Cls) { console.warn('Inimigo desconhecido', type); return null; }
       const e = new Cls(Object.assign({ x, y }, o));
-      return this.addEntity(e);
+      this.addEntity(e);
+      if (this.level && !e.boss) this.unstick(e);
+      return e;
     }
     spawnDrop(x, y, kind, qty = 1) {
       const a = Math.random() * 6.28;
@@ -263,7 +321,7 @@
       this.particles.clear();
       this.bossBar = null; this.boss = null;
       this.tauntT = 0;
-      this.co.list = this.co.list.filter((c) => c.name === 'intro' || c.name === 'memory' || c.name === 'transition' || c.name === 'respawn' || c.name === 'golemDefeated' || c.name === 'bossDefeated' || c.name === 'afterMemory');
+      this.co.list = this.co.list.filter((c) => c.persist || c.name === 'intro' || c.name === 'memory' || c.name === 'transition' || c.name === 'respawn' || c.name === 'golemDefeated' || c.name === 'bossDefeated' || c.name === 'afterMemory');
       this.camera.setBounds(this.level.pw, this.level.ph);
       this.camera.focus = null;
       for (const tp of this.level.makeTileProps()) this.entities.push(tp);
@@ -299,8 +357,9 @@
       }
       this.players.forEach((p, i) => {
         if (!p) return;
-        p.state = p.state === 'down' ? 'normal' : 'normal';
-        p.stateT = 0; p.kvx = 0; p.kvy = 0; p.bubbleText = null;
+        p.state = 'normal'; p.z = 0; p.flight = null; p.carried = false; p.svx = 0; p.svy = 0; p.frozenSolid = 0; p.chillT = 0;
+        if (p.hp <= 0) p.hp = Math.max(1, Math.round(p.maxHp * 0.3)); // nunca "vivo" com 0 de vida
+        p.stateT = 0; p.kvx = 0; p.kvy = 0; p.bubbleText = null; p.stuckT = 0;
         p.cancelActions(this);
         if (opts.positions) { p.x = opts.positions[i].x; p.y = opts.positions[i].y; p.dir = opts.positions[i].dir; }
         else {
@@ -320,12 +379,91 @@
       if (def.title && !opts.silent) G.HUD.showArea(def.title);
       if (def.onEnter) def.onEnter(this, spawn);
     }
-    unstick(p) {
-      if (!G.Physics.blocked(this, p.box, p)) return;
-      for (let r = 2; r < 40; r += 2) {
-        for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) {
-          const b = p.box; b.x += dx; b.y += dy;
-          if (!G.Physics.blocked(this, b, p)) { p.x += dx; p.y += dy; return; }
+    unstick(p, prefer) {
+      if (!G.Physics.blocked(this, p.box, p)) return false;
+      // procura o ponto livre mais próximo (de preferência do lado "prefer")
+      const dirs = [];
+      for (let r = 2; r < 64; r += 2) {
+        for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) dirs.push([dx, dy]);
+      }
+      if (prefer) {
+        // empurra para o lado indicado (ex.: para dentro da arena)
+        const near = dirs.filter(([dx, dy]) => Math.hypot(dx, dy) <= 40);
+        near.sort((a, b) => U.dist(p.x + a[0], p.y + a[1], prefer.x, prefer.y) - U.dist(p.x + b[0], p.y + b[1], prefer.x, prefer.y));
+        dirs.unshift(...near);
+      }
+      for (const [dx, dy] of dirs) {
+        const b = p.box; b.x += dx; b.y += dy;
+        if (G.Physics.blocked(this, b, p)) continue;
+        if (!p.flying && this.level.isHole(Math.floor((p.x + dx) / TS), Math.floor((p.y + dy - 2) / TS))) continue;
+        p.x += dx; p.y += dy;
+        return true;
+      }
+      return false;
+    }
+
+    // Um tile é transitável a pé? (tiles sólidos, água/abismo sem gelo/ponte e
+    // entidades sólidas como portões contam como bloqueio)
+    tilePassable(tx, ty) {
+      const lv = this.level;
+      if (lv.blocksAt(tx, ty, null)) return false;
+      const cx = tx * TS + 8, cy = ty * TS + 8;
+      for (const e of this.solids) {
+        if (e.dead || !e.solid) continue;
+        const b = e.box;
+        if (cx >= b.x && cx < b.x + b.w && cy >= b.y && cy < b.y + b.h) return false;
+        // entidades largas (portões 16x16) cobrem o tile inteiro
+        if (b.w >= 14 && b.h >= 12 && U.rectsOverlap({ x: tx * TS + 4, y: ty * TS + 4, w: 8, h: 8 }, b)) return false;
+      }
+      return true;
+    }
+    // Existe caminho a pé entre dois pontos (busca em largura limitada)?
+    reachable(ax, ay, bx, by, margin = 8) {
+      const sx = Math.floor(ax / TS), sy = Math.floor((ay - 3) / TS);
+      const ex = Math.floor(bx / TS), ey = Math.floor((by - 3) / TS);
+      if (sx === ex && sy === ey) return true;
+      const x0 = Math.min(sx, ex) - margin, x1 = Math.max(sx, ex) + margin;
+      const y0 = Math.min(sy, ey) - margin, y1 = Math.max(sy, ey) + margin;
+      const W2 = x1 - x0 + 1;
+      const seen = new Uint8Array(W2 * (y1 - y0 + 1));
+      const q = [[sx, sy]];
+      seen[(sy - y0) * W2 + (sx - x0)] = 1;
+      while (q.length) {
+        const [x, y] = q.shift();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < x0 || ny < y0 || nx > x1 || ny > y1) continue;
+          const k = (ny - y0) * W2 + (nx - x0);
+          if (seen[k]) continue;
+          seen[k] = 1;
+          if (nx === ex && ny === ey) return true;
+          if (!this.tilePassable(nx, ny)) continue;
+          q.push([nx, ny]);
+        }
+      }
+      return false;
+    }
+    // Junta a dupla: quem ficou para trás (do outro lado de um portão, longe
+    // demais) aparece ao lado de quem está à frente. Usado antes de fechar arenas.
+    regroup(leader, maxDist = 72) {
+      if (!leader) return;
+      this.solids = this.entities.filter((e) => !e.dead && (e.solid || e.blocksProjectiles));
+      for (const p of this.players) {
+        if (!p || p === leader) continue;
+        const near = U.dist(p.x, p.y, leader.x, leader.y) <= maxDist && this.reachable(p.x, p.y, leader.x, leader.y, 4);
+        if (near) continue;
+        const from = { x: p.x, y: p.y };
+        for (const [ox, oy] of [[0, 14], [-16, 6], [16, 6], [-16, -6], [16, -6], [0, -14], [-24, 12], [24, 12], [0, 24], [0, 0]]) {
+          const nx = leader.x + ox, ny = leader.y + oy;
+          const b = { x: nx - p.w / 2, y: ny - p.h, w: p.w, h: p.h };
+          if (G.Physics.blocked(this, b, p) || this.level.isHole(Math.floor(nx / TS), Math.floor((ny - 2) / TS))) continue;
+          if (!this.reachable(leader.x, leader.y, nx, ny, 3)) continue;
+          p.x = nx; p.y = ny; p.kvx = 0; p.kvy = 0;
+          if (p.state === 'down') p.revive(this, 0.3);
+          p.cancelActions(this); if (p.state !== 'normal') { p.state = 'normal'; p.stateT = 0; }
+          p.lastSafe = { x: p.x, y: p.y };
+          for (const q of [from, p]) this.particles.burst(q.x, q.y - 10, 14, { colors: ['#ffe8a0', '#ffffff'], speed: 40, life: 0.5, glow: true });
+          break;
         }
       }
     }
@@ -395,7 +533,7 @@
     onPlayerDown(p) {
       this.stats.downs++;
       const other = p.partner(this);
-      if (other && other.state === 'down') this.gameOver();
+      if (other && other.state === 'down' && !other.plumaPending) this.gameOver();
       else if (other) { this.bubble(other, p.kind === 'mage' ? 'Lirien! Aguenta firme!' : 'Aldren! Levanta!', 2); this.toast(`${p.name} caiu! Segure ${G.Characters[other.key].keys.act} perto para reviver.`, 3); }
     }
     onPlayerRevived(p) { this.stats.revives++; }
@@ -419,7 +557,7 @@
       this.inMemory = null;
       this.restoreMemBackup();
       this.letterTarget = 0; this.memoryOverlay = 0; this.camera.focus = null;
-      for (const p of this.players) { p.young = false; p.state = 'normal'; }
+      for (const p of this.players) { p.young = false; p.talen = false; p.name = G.Characters[p.key].name; p.state = 'normal'; }
       this.co.start(function* () {
         g.fade.a = 1; g.fade.target = 1;
         if (cp && G.Areas[cp.area]) g.loadArea(cp.area, null, { pos: cp });
@@ -462,9 +600,12 @@
         g.letterbox(true);
         yield g.fadeTo(1, 1.2, '#fff8e8');
         g.present = { area: g.level.id, level: g.level, entities: g.entities, p: g.players.map((p) => ({ x: p.x, y: p.y, dir: p.dir })) };
-        g.memBackup = { spells: g.unlockedSpells.slice(), spell: g.players[0].spell };
+        g.memBackup = { spells: g.unlockedSpells.slice(), spell: g.players[0].spell, abilities: [...g.abilities] };
         g.inMemory = id;
-        g.players[1].young = true;
+        const p2 = def.p2 || 'kid';
+        g.players[1].young = p2 === 'kid';
+        g.players[1].talen = p2 === 'talen';
+        if (p2 === 'talen') g.players[1].name = 'Sir Talen';
         g.loadArea(def.area, 'start', { silent: true });
         yield C.wait(0.3);
         g.card = { text: 'MEMÓRIA', sub: def.when.toUpperCase(), t: 0, dur: 2.8, white: true };
@@ -483,7 +624,7 @@
       this.co.start(function* () {
         yield g.fadeTo(1, 1.2, '#fff8e8');
         g.inMemory = null;
-        g.players[1].young = false;
+        g.players[1].young = false; g.players[1].talen = false; g.players[1].name = G.Characters.aldren.name;
         g.restoreMemBackup();
         g.memories.add(id);
         const pr = g.present;
@@ -522,12 +663,14 @@
     restoreMemBackup() {
       if (!this.memBackup) return;
       this.unlockedSpells = this.memBackup.spells;
+      if (this.memBackup.abilities) this.abilities = new Set(this.memBackup.abilities);
       if (this.players[0]) this.players[0].spell = this.unlockedSpells.includes(this.memBackup.spell) ? this.memBackup.spell : this.unlockedSpells[0];
       this.memBackup = null;
     }
 
     onEnemyKilled(e) {
       this.stats.kills++;
+      if (e.type) this.bestiary[e.type] = (this.bestiary[e.type] || 0) + 1;
       if (e.type === 'greywolf') {
         this.spawnPickup('presa', e.x, e.y, { flag: 'presa_lobo' });
         this.setFlag('lobo_dead', true);
@@ -561,7 +704,7 @@
 
       // pausa
       if (G.Input.menu.pause && !this.ui.open && !this.dialogue.active && !this.transitioning && !this.co.blocking) { this.ui.openPause(this); return; }
-      if (G.Input.menu.soloSwap && G.Input.solo && !this.ui.open) { G.Input.soloActive = 1 - G.Input.soloActive; G.Audio.sfx('ui'); }
+      if (G.Input.menu.soloSwap && G.Input.solo && !this.ui.open && !this.co.blocking) { const prev = G.Input.soloActive; G.Input.soloActive = 1 - prev; this.ai.onSwap(this, prev); G.Audio.sfx('ui'); }
       if (this.ui.open) { this.ui.update(dt, this); return; }
 
       this.playTime += dt;
@@ -583,17 +726,28 @@
       // jogador caído pode ser "interagido" pelo outro: tratado no Character
 
       for (const p of this.players) p.update(dt, this);
+      if (!this.inputLocked()) this.applyWind(dt);
+      this.stasisList = this.entities.filter((e) => e instanceof G.ObjectTypes.stasis && !e.dead);
       const list = this.entities;
       // durante cutscenes os inimigos e projéteis ficam em pausa (exceto animações de chefe)
       const freeze = this.co.blocking && !this.transitioning;
       for (let i = 0; i < list.length; i++) {
         const e = list[i];
         if (e.dead) continue;
-        if (freeze && (e.isEnemy || e instanceof G.Combat.Projectile)) {
-          if (e.boss && ['dying', 'transition', 'roar', 'dormant'].includes(e.state)) e.update(dt, this);
+        const proj = e instanceof G.Combat.Projectile;
+        if (freeze && (e.isEnemy || proj)) {
+          if (e.boss && ['dying', 'transition', 'roar', 'dormant', 'intro'].includes(e.state)) e.update(dt, this);
           else e.animT = (e.animT || 0) + dt;
           continue;
         }
+        // Estase: inimigos e projéteis inimigos dentro da bolha andam devagar
+        if (this.stasisList.length && (e.isEnemy || (proj && e.team === 'enemy'))) {
+          const k = this.stasisAt(e.x, e.y);
+          e.slowK = k;
+          e.update(dt * k, this);
+          continue;
+        }
+        e.slowK = 1;
         e.update(dt, this);
       }
       this.entities = this.entities.filter((e) => !e.dead);
@@ -608,9 +762,59 @@
 
       this.particles.update(dt);
       const bb = this.bossBar;
-      this.camera.extra = bb && !bb.dead ? { x: bb.x, y: bb.y - 24 } : null;
+      this.camera.extra = bb && !bb.dead ? { x: bb.x, y: bb.y - (bb.z || 0) - (bb.camLift != null ? bb.camLift : 24), w: bb.camWeight || 0.28 } : null;
       this.camera.update(dt, this.players);
       G.HUD.update(dt, this);
+    }
+
+    // fator de tempo em um ponto (bolhas de Estase)
+    stasisAt(x, y) {
+      const l = this.stasisList || [];
+      for (const b of l) if (!b.dead && b.contains(x, y)) return this.has('estase_longa') ? 0.2 : 0.28;
+      return 1;
+    }
+
+    // Vento: empurra (Lirien é leve; Aldren, pesado). Com o escudo erguido contra
+    // o vento, o Aldren não se move — e quem estiver logo atrás dele fica protegido.
+    applyWind(dt) {
+      const winds = this.level.def.winds;
+      if (!winds || !winds.length) return;
+      const [li, al] = this.players;
+      for (const p of this.players) {
+        if (!p || p.isDown || p.state === 'flight' || p.carried) continue;
+        for (const w of winds) {
+          if (w.cond && !w.cond(this)) continue;
+          const r = { x: w.x * TS, y: w.y * TS, w: w.w * TS, h: w.h * TS };
+          if (!U.pointInRect(p.x, p.y - 2, r)) continue;
+          const pulse = w.gust ? (Math.sin(this.time * (w.gustSpeed || 1.4)) > 0.2 ? 1 : 0.15) : 1;
+          const f = (w.force || 90) * pulse;
+          const wd = U.norm(w.dx, w.dy);
+          let k = p.kind === 'mage' ? 1 : 0.38;
+          // escudo contra o vento
+          const shieldUp = al && al.blocking && !al.isDown && (al.fx * -wd.x + al.fy * -wd.y) > 0.7;
+          if (p === al && shieldUp) k = 0;
+          if (p === li && shieldUp) {
+            // "sombra" do escudo: um cone atrás do Aldren, no sentido do vento
+            const rx = li.x - al.x, ry = li.y - al.y;
+            const along = rx * wd.x + ry * wd.y, side = Math.abs(rx * -wd.y + ry * wd.x);
+            const reach = this.has('escudo_vento') ? 80 : 58;
+            if (along > -4 && along < reach && side < 12 + along * 0.3) k = 0;
+          }
+          if (k > 0) p.tryMove(this, wd.x * f * k * dt, wd.y * f * k * dt);
+        }
+      }
+      // partículas do vento dentro da tela
+      const cam = this.camera;
+      for (const w of winds) {
+        if (w.cond && !w.cond(this)) continue;
+        const pulse = w.gust ? (Math.sin(this.time * (w.gustSpeed || 1.4)) > 0.2 ? 1 : 0.15) : 1;
+        if (Math.random() < 6 * dt * pulse) {
+          const x = w.x * TS + Math.random() * w.w * TS, y = w.y * TS + Math.random() * w.h * TS;
+          if (!cam.inView(x, y, 20)) continue;
+          const wd = U.norm(w.dx, w.dy);
+          for (let i = 0; i < 5; i++) this.particles.add({ x: x - wd.x * i * 3, y: y - wd.y * i * 3 - 6, vx: wd.x * (w.force || 90) * 1.6, vy: wd.y * (w.force || 90) * 1.6, life: 0.45, color: i ? 'rgba(232,240,255,0.6)' : '#ffffff', drag: 0 });
+        }
+      }
     }
 
     checkZones() {
@@ -631,9 +835,22 @@
         const inside = ps.filter((p) => U.pointInRect(p.x, p.y - 2, ex));
         if (!inside.length) continue;
         const other = this.players.find((p) => !inside.includes(p));
-        if (other && U.dist(other.x, other.y, ex.x + 8, ex.y + 8) > 90) {
-          if (!this._waitMsgT || this.time - this._waitMsgT > 3) { this._waitMsgT = this.time; this.bubble(inside[0], 'Vem comigo!', 1.5); }
-          continue;
+        if (other) {
+          // o parceiro precisa estar perto E do mesmo lado (sem portão/parede no meio)
+          let ok = !other.isDown && U.dist(other.x, other.y, inside[0].x, inside[0].y) <= 90;
+          if (ok) {
+            if (!this._reachCache || this.time - this._reachCache.t > 0.25) {
+              this._reachCache = { t: this.time, v: this.reachable(other.x, other.y, inside[0].x, inside[0].y, 6) };
+            }
+            ok = this._reachCache.v;
+          }
+          if (!ok) {
+            if (!this._waitMsgT || this.time - this._waitMsgT > 3) {
+              this._waitMsgT = this.time;
+              this.bubble(inside[0], other.isDown ? 'Não vou sem você! Levanta!' : 'Vem comigo!', 1.6);
+            }
+            continue;
+          }
         }
         this.changeArea(ex.to, ex.spawn);
         return;
@@ -660,7 +877,7 @@
       const kind = this.level.def.ambient;
       if (!kind) return;
       const cam = this.camera;
-      const rate = { leaves: 2, dust: 3, fireflies: 1.5, sparkles: 4, embers: 3, petals: 2 }[kind] || 1;
+      const rate = { leaves: 2, dust: 3, fireflies: 1.5, sparkles: 4, embers: 4, petals: 2, snow: 9, blizzard: 22 }[kind] || 1;
       if (Math.random() < rate * dt) {
         const x = cam.x + Math.random() * W, y = cam.y + Math.random() * H;
         if (kind === 'leaves') this.particles.add({ x, y: cam.y - 4, vx: U.rand(5, 20), vy: U.rand(12, 22), life: 8, color: U.pick(['#6aa04a', '#a8b84a', '#c8a03a']), wobble: 20, fade: false });
@@ -668,6 +885,9 @@
         if (kind === 'fireflies') this.particles.add({ x, y, vx: U.rand(-6, 6), vy: U.rand(-6, 6), life: 4, color: '#e8f0a0', glow: true, wobble: 10, flicker: true });
         if (kind === 'sparkles') this.particles.add({ x, y, vy: U.rand(-12, -4), life: 2.5, color: U.pick(['#8ae8ff', '#c8a8ff', '#ffffff']), glow: true });
         if (kind === 'petals') this.particles.add({ x, y: cam.y - 4, vx: U.rand(-10, 10), vy: U.rand(10, 18), life: 9, color: U.pick(['#ffd0f0', '#ffffff', '#ffb0d0']), wobble: 16, fade: false });
+        if (kind === 'snow') this.particles.add({ x: x + 20, y: cam.y - 4, vx: U.rand(-8, 2), vy: U.rand(14, 26), life: 12, color: U.pick(['#ffffff', '#e8f0ff', '#c8d8f0']), wobble: 10, drag: 0, size: Math.random() < 0.2 ? 2 : 1 });
+        if (kind === 'blizzard') this.particles.add({ x: cam.x - 10, y: cam.y + Math.random() * H, vx: U.rand(90, 160), vy: U.rand(10, 40), life: 4, color: U.pick(['#ffffff', '#e8f0ff', '#c8d8f0']), drag: 0, size: Math.random() < 0.3 ? 2 : 1 });
+        if (kind === 'embers') this.particles.add({ x, y: cam.y + H + 4, vx: U.rand(-8, 8), vy: U.rand(-30, -14), life: 7, color: U.pick(['#ff8a3a', '#ffd84a', '#ff6a3a']), glow: true, wobble: 12, drag: 0 });
       }
     }
 
@@ -698,6 +918,7 @@
       const rest = drawList.filter((e) => e.layer >= 0).concat(this.players).sort((a, b) => (a.layer > 0 ? 1e5 : 0) + a.sortY - ((b.layer > 0 ? 1e5 : 0) + b.sortY));
       for (const e of ground) e.draw(w, cam, this);
       for (const e of rest) e.draw(w, cam, this);
+      for (const e of this.entities) if (e.drawBeam && !e.dead) e.drawBeam(w, cam, this);
       this.particles.draw(w, cam, false);
       // luz ambiente
       const def = this.level.def;

@@ -117,12 +117,15 @@
       const w = 260, x = Math.round((G.VIEW_W - w) / 2), y = G.VIEW_H - 24;
       ctx.fillStyle = 'rgba(10,8,18,0.75)'; ctx.fillRect(x - 6, y - 13, w + 12, 22);
       F().draw(ctx, b.name, G.VIEW_W / 2, y - 10, '#f2d98c', { align: 'center', shadow: true });
-      UI().bar(ctx, x, y + 1, w, 5, b.hp / b.maxHp, b.phase === 3 || b.phase2 ? '#ff4a6a' : '#c84a8a', '#2a1424');
+      UI().bar(ctx, x, y + 1, w, 5, b.hp / b.maxHp, b.phase >= 3 || b.phase2 ? '#ff4a6a' : '#c84a8a', '#2a1424');
       if (b.shield > 0 && b.dazedT <= 0) {
         for (let i = 0; i < Math.ceil(b.shield); i++) { ctx.fillStyle = '#c8a8ff'; ctx.fillRect(x + w - 8 - i * 8, y - 4, 6, 3); }
       }
       // marcas de fase
-      if (b.type === 'boss') for (const k of [0.33, 0.66]) { ctx.fillStyle = '#0a0812'; ctx.fillRect(x + Math.round(w * k), y + 1, 1, 5); }
+      const marks = { boss: [0.33, 0.66], ysveth: [0.34, 0.66], nyxara: [0.25, 0.5, 0.75], golem: [0.5], grumak: [0.5] }[b.type];
+      if (marks) for (const k of marks) { ctx.fillStyle = '#0a0812'; ctx.fillRect(x + Math.round(w * k), y + 1, 1, 5); }
+      if (b.type === 'grumak' && b.plates > 0) for (let i = 0; i < b.plates; i++) { ctx.fillStyle = '#8ad0f0'; ctx.fillRect(x + w - 8 - i * 8, y - 4, 6, 3); }
+      if (b.type === 'nyxara' && b.phase === 4) for (let i = 0; i < b.seals; i++) { ctx.fillStyle = '#f2d98c'; ctx.fillRect(x + w - 8 - i * 8, y - 4, 6, 3); }
     }
     HUD.drawToasts(ctx, g);
     // modo solo

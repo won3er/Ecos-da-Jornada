@@ -13,7 +13,32 @@
     night: ['#14261e', '#1c3428', '#284634', '#365a42', '#4a7454'],
     sanctum: ['#1e3a4a', '#284e5e', '#36687a', '#4e8a9a', '#7ab8c4'],
     cave: ['#1e3a2a', '#284e34', '#36683e', '#4e8a4e', '#7ab874'],
+    snow: ['#1a3430', '#24463e', '#30584e', '#426e60', '#5a8a78'],
+    mine: ['#1e3a2a', '#284e34', '#36683e', '#4e8a4e', '#7ab874'],
+    fortress: ['#1e3a30', '#284c3c', '#36604a', '#4a785c', '#6a9a76'],
+    tower: ['#2a2a5a', '#36367a', '#46469a', '#6060b8', '#8a8ad8'],
+    dusk: ['#3a4a22', '#4e6028', '#6a7832', '#8e9440', '#c0b058'],
   };
+  // neve acumulada por cima de uma copa (desenhada nas variantes de inverno)
+  function snowCap(x, w, h, seed) {
+    const img = x.getImageData(0, 0, w, h), d = img.data, r = U.rng(seed);
+    for (let px = 0; px < w; px++) {
+      for (let py = 0; py < h; py++) {
+        if (d[(py * w + px) * 4 + 3] > 0) {
+          const depth = 2 + ((r() * 2) | 0);
+          for (let k = 0; k < depth && py + k < h; k++) {
+            const i = ((py + k) * w + px) * 4;
+            if (d[i + 3] === 0) break;
+            const c = k === depth - 1 ? [200, 214, 232] : [240, 246, 252];
+            d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+          }
+          break;
+        }
+      }
+    }
+    x.putImageData(img, 0, 0);
+  }
+  G.snowCap = snowCap;
 
   const Props = {};
 
@@ -38,6 +63,7 @@
       const px = (r() * 36 + 4) | 0, py = (r() * 26 + 4) | 0;
       if (inside(px, py)) { x.fillStyle = r() < 0.5 ? L[4] : L[0]; x.fillRect(px, py, 1, 1); }
     }
+    if (theme === 'snow') snowCap(x, 44, 52, 300 + v);
   });
 
   Props.pine = (theme, v) => cache(`pine_${theme}_${v}`, 30, 50, (x) => {
@@ -55,6 +81,14 @@
       x.fillStyle = L[3]; x.fillRect(15 - w + 2, top + 11, 3, 1); x.fillRect(14, top + 1, 1, 2);
     }
     x.fillStyle = L[4]; x.fillRect(14, 4, 1, 1);
+    if (theme === 'snow') {
+      // neve em cada camada da copa
+      for (let i = 0; i < 4; i++) {
+        const top = 4 + i * 9, w = 6 + i * 3 + (v % 2);
+        for (let j = 0; j < 5; j++) { const ww = Math.round((w * j) / 11); x.fillStyle = j < 3 ? '#f2f6fb' : '#c8d6e8'; x.fillRect(15 - ww, top + j, ww * 2, 1); }
+        x.fillStyle = '#f2f6fb'; x.fillRect(15 - w + 1, top + 10, 4, 1);
+      }
+    }
   });
 
   Props.rock = (theme, v) => cache(`rock_${theme}_${v}`, 18, 16, (x) => {
@@ -63,7 +97,8 @@
     P.ellipse(x, 9, 8, 7, 5, base);
     P.ellipse(x, 7, 6, 4, 3, U.shade(base, 0.2));
     x.fillStyle = U.shade(base, 0.4); x.fillRect(5, 4, 2, 1);
-    if (v % 2 && theme !== 'cave') { x.fillStyle = '#5a7a44'; x.fillRect(9, 2, 4, 2); x.fillRect(11, 4, 2, 1); }
+    if (theme === 'snow') { P.ellipse(x, 8, 4, 6, 2, '#f2f6fb'); x.fillStyle = '#c8d6e8'; x.fillRect(3, 6, 11, 1); }
+    else if (v % 2 && theme !== 'cave' && theme !== 'mine') { x.fillStyle = '#5a7a44'; x.fillRect(9, 2, 4, 2); x.fillRect(11, 4, 2, 1); }
   });
 
   Props.pillar = (theme, v) => cache(`pillar_${theme}_${v}`, 18, 40, (x) => {
@@ -81,8 +116,10 @@
     x.fillStyle = '#5a7a44'; x.fillRect(4, 28, 3, 6); x.fillRect(11, 22, 2, 4);
   });
 
-  Props.crystal = (theme, v) => cache(`crystal_${v}`, 18, 30, (x) => {
-    const cols = v % 2 ? ['#3a5aa8', '#6a9ae8', '#b8e0ff', '#ffffff'] : ['#5a3aa8', '#9a6ae8', '#e0c0ff', '#ffffff'];
+  Props.crystal = (theme, v) => cache(`crystal_${theme === 'snow' || theme === 'mine' ? 'ice' : theme === 'tower' ? 'star' : ''}${v}`, 18, 30, (x) => {
+    let cols = v % 2 ? ['#3a5aa8', '#6a9ae8', '#b8e0ff', '#ffffff'] : ['#5a3aa8', '#9a6ae8', '#e0c0ff', '#ffffff'];
+    if (theme === 'snow' || theme === 'mine') cols = v % 2 ? ['#3a7aa8', '#7ac0e8', '#d0f0ff', '#ffffff'] : ['#2a6a98', '#5aa8d8', '#b8e8ff', '#ffffff'];
+    if (theme === 'tower') cols = v % 2 ? ['#a8862a', '#e8c860', '#fff0b0', '#ffffff'] : ['#6a4ab8', '#a88ae8', '#e8d8ff', '#ffffff'];
     const shard = (cx, h, w) => {
       for (let j = 0; j < h; j++) {
         const ww = Math.max(1, Math.round(w * Math.min(1, (j + 2) / 6)));

@@ -226,7 +226,7 @@
         }
         return true;
       }
-      if (kind === 'bolt' || kind === 'charged' || kind === 'frost' || kind === 'special' || kind === 'prism') {
+      if (kind === 'bolt' || kind === 'charged' || kind === 'frost' || kind === 'special' || kind === 'prism' || kind === 'fire' || kind === 'beam') {
         if (this.on && !this.momentary) return true;
         this.on = true;
         G.Audio.sfx('crystal');
@@ -274,6 +274,12 @@
     setOpen(v, g, silent) {
       if (this.open === v) return;
       this.open = v; this.solid = !v; this.blocksProjectiles = !v;
+      // ao fechar, ninguém fica preso dentro da grade
+      if (!v) {
+        g.solids = g.entities.filter((e) => !e.dead && (e.solid || e.blocksProjectiles));
+        if (!g.solids.includes(this)) g.solids.push(this);
+        for (const p of g.players) if (p && U.rectsOverlap(p.box, this.box)) g.unstick(p, this.pushTo || null);
+      }
       if (!silent) {
         G.Audio.sfx('gate');
         g.camera.shake(1.5, 0.3);
@@ -395,7 +401,7 @@
     constructor(o) { super(Object.assign({ solid: true, w: 16, h: 12, hh: 18 }, o)); this.hp = 3; this.wob = 0; this.blocksProjectiles = true; }
     init(g) { if (this.flag && g.flag(this.flag)) this.dead = true; }
     onHit(kind, src, g) {
-      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'golem') {
+      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'golem' || kind === 'fire') {
         this.hp -= kind === 'sword' ? 1 : 3;
         this.wob = 0.2;
         G.Audio.sfx('hit');
@@ -421,7 +427,7 @@
     constructor(o) { super(Object.assign({ solid: true, w: 14, h: 10, hh: 12 }, o)); this.cut = false; this.theme = o.theme || 'village'; this.drop = o.drop; }
     onHit(kind, src, g) {
       if (this.cut) return false;
-      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'charged' || kind === 'frost') {
+      if (kind === 'sword' || kind === 'heavy' || kind === 'special' || kind === 'charged' || kind === 'frost' || kind === 'fire' || kind === 'impact') {
         this.cut = true; this.solid = false;
         G.Audio.sfx('swing');
         g.particles.burst(this.x, this.y - 6, 14, { colors: ['#4a8a3a', '#6aa04a', '#2e5a28'], speed: 60, life: 0.6, g: 120, up: 40 });
@@ -437,11 +443,21 @@
 
   // ---------------------------------------------------------------- BRASEIRO (aceso por magia)
   class Brazier extends Obj {
-    constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 18 }, o)); this.lit = !!o.lit; this.blocksProjectiles = true; }
+    constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 18 }, o)); this.lit = !!o.lit; this.blocksProjectiles = true; this.needsFire = !!o.needsFire; this.burnTime = o.burnTime || 0; this.litT = 0; }
     init(g) { if (this.flag && g.flag(this.flag)) this.lit = true; }
+    update(dt, g) {
+      // braseiros temporários apagam sozinhos (puzzles de tempo)
+      if (this.burnTime && this.lit) { this.litT += dt; if (this.litT > g.syncWindow(this.burnTime) && !(this.flag && g.flag(this.flag))) { this.lit = false; this.litT = 0; G.Audio.sfx('plate'); g.particles.burst(this.x, this.y - 18, 8, { color: '#5a5460', speed: 20, life: 0.6 }); } }
+      else this.litT = 0;
+    }
     isOn() { return this.lit; }
     onHit(kind, src, g) {
-      if (kind === 'bolt' || kind === 'charged' || kind === 'special' || kind === 'prism') {
+      if (kind === 'bolt' || kind === 'charged' || kind === 'special' || kind === 'prism' || kind === 'fire') {
+        if (this.needsFire && kind !== 'fire' && !this.lit) {
+          G.Audio.sfx('immune');
+          if (!this._nf || g.time - this._nf > 1.5) { this._nf = g.time; g.particles.text(this.x, this.y - 30, 'Precisa de fogo de verdade', '#ffb84a'); }
+          return true;
+        }
         if (!this.lit) {
           this.lit = true; if (this.flag) g.setFlag(this.flag, true);
           G.Audio.sfx('bigBolt');
@@ -595,10 +611,14 @@
     constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 26 }, o)); this.active = false; this.cpId = o.cp || o.id; }
     canInteract() { return true; }
     prompt() { return 'Meditar'; }
-    interact(p, g) { this.activate(g, true); g.ui.openSkills(g, true); }
+    interact(p, g) { this.activate(g, true); g.ui.openWaystone(g, this); }
     activate(g, silent) {
       const wasActive = g.checkpoint && g.checkpoint.id === this.cpId && g.checkpoint.area === g.level.id;
       g.setCheckpoint({ id: this.cpId, area: g.level.id, x: this.x, y: this.y + 14 });
+      // registra para a viagem rápida
+      if (!g.inMemory && this.cpId && !g.waystones[this.cpId]) {
+        g.waystones[this.cpId] = { area: g.level.id, x: this.x, y: this.y + 14, name: this.data.name || g.level.def.title || g.level.id, ch: g.chapter, order: Object.keys(g.waystones).length };
+      }
       this.active = true;
       for (const p of g.players) if (p) p.fullHeal(g);
       g.save();
@@ -677,6 +697,23 @@
       } else if (this.look === 'ribbon') {
         ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, y - 14, 2, 14);
         ctx.fillStyle = '#d84a7a'; ctx.fillRect(x - 3, y - 12, 6, 2); ctx.fillRect(x + 2, y - 10, 2, 5); ctx.fillRect(x - 4, y - 10, 2, 4);
+      } else if (this.look === 'snowman') {
+        P.circle(ctx, x, y - 6, 6, '#c8d4e4'); P.circle(ctx, x, y - 7, 5, '#f2f6fb');
+        P.circle(ctx, x, y - 16, 4, '#c8d4e4'); P.circle(ctx, x, y - 17, 3, '#f2f6fb');
+        ctx.fillStyle = '#1a1a2a'; ctx.fillRect(x - 2, y - 18, 1, 1); ctx.fillRect(x + 1, y - 18, 1, 1);
+        ctx.fillStyle = '#ff8a3a'; ctx.fillRect(x, y - 17, 2, 1);
+        ctx.fillStyle = '#a8dcf4'; ctx.fillRect(x - 5, y - 22, 2, 3); ctx.fillRect(x + 3, y - 22, 2, 3);
+        ctx.fillStyle = '#c84a4a'; ctx.fillRect(x - 3, y - 13, 7, 2);
+      } else if (this.look === 'scarf') {
+        ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, y - 20, 3, 20); ctx.fillRect(x - 6, y - 18, 13, 2);
+        ctx.fillStyle = '#c84a4a'; ctx.fillRect(x + 2, y - 17, 4, 2); ctx.fillRect(x + 4, y - 15, 2, 7);
+        ctx.fillStyle = '#f2f6fb'; ctx.fillRect(x - 6, y - 19, 13, 1);
+      } else if (this.look === 'crown') {
+        const k = Math.sin(g.time * 3) * 0.5 + 0.5;
+        P.ellipse(ctx, x, y - 2, 8, 3, '#2a2448');
+        for (const [ox, h] of [[-4, 5], [0, 8], [4, 5]]) { ctx.fillStyle = '#d9b45a'; ctx.fillRect(x + ox - 1, y - 6 - h, 3, h); }
+        ctx.fillStyle = '#d9b45a'; ctx.fillRect(x - 6, y - 7, 13, 3);
+        ctx.globalAlpha = k; P.ring(ctx, x, y - 10, 9, '#c8a8ff'); ctx.globalAlpha = 1;
       } else if (this.look === 'star') {
         const k = Math.sin(g.time * 3) * 0.5 + 0.5;
         P.circle(ctx, x, y - 10, 5, '#f2d98c'); P.circle(ctx, x, y - 10, 3, '#ffffff');
@@ -776,9 +813,16 @@
       else if (this.kind === 'cart') { this.img = G.Props.cartWheel(); this.w = 30; this.h = 10; }
       else if (this.kind === 'campfire') { this.img = G.Props.campfire(); this.w = 14; this.h = 8; this.fire = true; }
       else if (this.kind === 'crystalbig') { this.img = G.Props.crystal('sanctum', o.v || 0); this.w = 14; this.h = 8; }
+      else if (this.kind === 'knightstatue') { this.img = G.Props.knightStatue(); this.w = 18; this.h = 10; }
+      else if (this.kind === 'throne') { this.img = G.Props.throne(); this.w = 36; this.h = 12; }
+      else if (this.kind === 'snowtent') { this.img = G.Props.snowTent(); this.w = 30; this.h = 12; }
+      else if (this.kind === 'minecart') { this.img = G.Props.mineCart(); this.w = 18; this.h = 8; }
+      else if (this.kind === 'shelf') { this.img = G.Props.bookshelf(); this.w = 28; this.h = 10; }
+      else if (this.kind === 'telescope') { this.img = G.Props.telescope(); this.w = 16; this.h = 8; }
+      else if (this.kind === 'pedestal') { this.img = G.Props.starPedestal(o.on); this.w = 14; this.h = 8; }
       else if (this.kind === 'stairs') { this.img = G.Props.stairs(o.sw || 2); this.solid = false; this.layer = -1; this.w = 1; this.h = 1; }
       if (o.door) this.door = o.door;
-      this.blocksProjectiles = this.kind === 'house' || this.kind === 'well' || this.kind === 'statue';
+      this.blocksProjectiles = this.kind === 'house' || this.kind === 'well' || this.kind === 'statue' || this.kind === 'knightstatue' || this.kind === 'throne' || this.kind === 'shelf';
     }
     canInteract(p) { return !!(this.door || this.data.text); }
     prompt() { return this.door ? 'Bater' : 'Olhar'; }
@@ -918,6 +962,7 @@
       icon('bridge', (x) => { x.fillStyle = '#6ad8ff'; x.fillRect(0, 4, 10, 3); x.fillStyle = '#c8f4ff'; x.fillRect(0, 4, 10, 1); x.fillRect(1, 6, 2, 1); x.fillRect(6, 6, 2, 1); x.fillStyle = '#2a4a6a'; x.fillRect(0, 7, 1, 3); x.fillRect(9, 7, 1, 3); });
       icon('shield', (x) => { x.fillStyle = '#5a6676'; x.fillRect(1, 0, 8, 6); x.fillRect(2, 6, 6, 2); x.fillRect(3, 8, 4, 2); x.fillStyle = '#9aa6b6'; x.fillRect(2, 1, 6, 5); x.fillRect(3, 6, 4, 2); x.fillStyle = '#c84a4a'; x.fillRect(4, 1, 2, 6); });
       icon('taunt', (x) => { x.fillStyle = '#ffd84a'; x.fillRect(4, 0, 2, 6); x.fillRect(4, 8, 2, 2); x.fillStyle = '#ff8a3a'; x.fillRect(1, 2, 1, 4); x.fillRect(8, 2, 1, 4); });
+      if (G.IconsExtra) G.IconsExtra(icon, P);
     },
     draw(ctx, name, x, y) { const i = ICON[name] || ICON.bag; if (i) ctx.drawImage(i, Math.round(x), Math.round(y)); },
     get: (name) => ICON[name] || ICON.bag,

@@ -88,15 +88,17 @@
   G.LevelKit = {
     // fecha portões, invoca ondas e reabre (arena)
     *arena(g, gates, waves, opts = {}) {
-      for (const id of gates) { const gt = g.entities.find((e) => e.id === id); if (gt) gt.setOpen(false, g); }
+      for (const id of gates) { const gt = g.entities.find((e) => e.id === id); if (gt) { if (opts.inside) gt.pushTo = opts.inside; gt.setOpen(false, g); } }
       G.Audio.playMusic('combat', 0.6);
       for (const wave of waves) {
+        const spawned = [];
         for (const [type, tx, ty, o] of wave) {
           const e = g.spawnEnemy(type, tx * 16 + 8, ty * 16 + 14, Object.assign({}, o || {}));
-          if (e) { e.aggro = true; g.particles.burst(e.x, e.y - 8, 14, { colors: ['#2a1840', '#6a3a9a'], speed: 40, life: 0.5 }); }
+          if (e) { e.aggro = true; spawned.push(e); g.particles.burst(e.x, e.y - 8, 14, { colors: ['#2a1840', '#6a3a9a'], speed: 40, life: 0.5 }); }
         }
         yield G.Co.wait(0.5);
-        yield g.waitClear((e) => !e.boss);
+        // espera só os inimigos desta onda (os de outras salas não contam)
+        yield G.Co.until(() => spawned.every((e) => e.dead || e.deathT > 0 || !g.entities.includes(e)));
         yield G.Co.wait(0.6);
       }
       for (const id of gates) { const gt = g.entities.find((e) => e.id === id); if (gt) gt.setOpen(true, g); }

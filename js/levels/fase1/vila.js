@@ -39,9 +39,13 @@ G.defineArea({
     // nicho do caixote (segredo)
     b.frame(43, 22, 4, 5, 'F'); b.rect(44, 23, 2, 3, '.'); b.set(43, 24, '.');
     b.rect(42, 24, 1, 1, '.');
+    // estrada norte (Capítulo II): portão de madeira entre cercas
+    b.rect(28, 0, 2, 12, ':');
+    b.set(26, 3, 'F'); b.set(27, 3, 'F'); b.set(30, 3, 'F'); b.set(31, 3, 'F');
+    b.set(26, 2, 'T'); b.set(31, 2, 'T');
   },
-  spawns: { start: [23, 18], leste: [44, 15] },
-  exits: [{ x: 47, y: 13, h: 5, to: 'estrada', spawn: 'oeste' }],
+  spawns: { start: [23, 18], leste: [44, 15], norte: [28, 2] },
+  exits: [{ x: 47, y: 13, h: 5, to: 'estrada', spawn: 'oeste' }, { x: 28, y: 0, w: 2, to: 'trilha', spawn: 'sul' }],
   zones: [{ x: 40, y: 14, w: 2, h: 3, trigger: 'vila_saida' }],
   entities: [
     // casas
@@ -59,7 +63,10 @@ G.defineArea({
     { type: 'decor', kind: 'banner', tx: 18, ty: 9, color: '#5a4a8a' }, { type: 'decor', kind: 'banner', tx: 25, ty: 9, color: '#5a4a8a' },
     { type: 'decor', kind: 'barrel', tx: 15, ty: 13 }, { type: 'decor', kind: 'barrel', tx: 8, ty: 14 },
     { type: 'decor', kind: 'barrel', tx: 36, ty: 10 }, { type: 'decor', kind: 'barrel', tx: 36, ty: 11 },
-    { type: 'decor', kind: 'cart', tx: 27, ty: 11 },
+    { type: 'decor', kind: 'cart', tx: 25, ty: 12 },
+    { type: 'gate', id: 'portao_n1', tx: 28, ty: 3, flag: 'portao_norte' }, { type: 'gate', id: 'portao_n2', tx: 29, ty: 3, flag: 'portao_norte' },
+    { type: 'sign', tx: 27, ty: 5, text: 'Estrada Norte — Montanhas de Gelvar. "Portão fechado durante o inverno. Ordem do Ancião Orvin."' },
+    { type: 'waystone', tx: 21, ty: 18, cp: 'cp_vila', name: 'Vila de Brisaclara' },
     { type: 'decor', kind: 'tent', tx: 44, ty: 20 },
     // NPCs
     { npc: 'orvin', tx: 23, ty: 11 },

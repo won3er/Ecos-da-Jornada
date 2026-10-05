@@ -18,8 +18,17 @@
     'k': { g: 'stone', solid: 1, tall: 1, prop: 'pillar' }, 'x': { g: 'magic', solid: 1, tall: 1, prop: 'crystal' },
     'Y': { g: 'cave', solid: 1, prop: 'stalagmite' }, 'g': { g: 'grass', solid: 1, prop: 'grave' },
     'B': { g: 'bridge', bridge: 1 }, 'D': { g: 'dirt', solid: 1, prop: 'stump' },
+    // --- Capítulos II e III ---
+    's': { g: 'snow' },                                   // neve (em qualquer tema)
+    'i': { g: 'ice', slip: 1 },                           // gelo escorregadio
+    'I': { wall: 'ice', solid: 1, tall: 1, melt: 1 },     // parede de gelo (Chama Estelar derrete)
+    'b': { g: 'stone', solid: 1, low: 1 },                // muro baixo (dá para arremessar por cima)
+    'q': { g: 'carpet' },                                 // tapete (fortaleza)
+    'z': { g: 'star' },                                   // piso estelar (torre)
+    'Z': { chasm: 1, solid: 1, starvoid: 1 },             // vazio estelar (abismo da torre)
+    'j': { g: 'planks' },                                 // tábuas da mina
   };
-  const FLOOR_CHARS = '.,;M:p_fmwRue';
+  const FLOOR_CHARS = '.,;M:p_fmwRuesiqzj';
 
   const THEMES = {
     village: { grass: ['#5c8d3e', '#4c7a34', '#6fa04a', '#88b85c'], dirt: ['#9a7650', '#80603f', '#b08a60'] },
@@ -29,6 +38,11 @@
     sanctum: { grass: ['#3a6466', '#2e5254', '#4a7a7a', '#68a0a0'], dirt: ['#6a6a80', '#555468', '#80809a'] },
     memory: { grass: ['#6a9a48', '#5a8a3e', '#7cae56', '#98c46a'], dirt: ['#a8845c', '#8e6c48', '#bc9a6c'] },
     night: { grass: ['#2e4a3e', '#243c32', '#3a5a4a', '#4e7060'], dirt: ['#4e4458', '#3e3646', '#605670'] },
+    snow: { grass: ['#dfe7f1', '#c7d3e3', '#eef3f9', '#ffffff'], dirt: ['#a59fae', '#8b8596', '#bdb7c4'] },
+    mine: { grass: ['#3a4a52', '#2e3c44', '#4a5c64', '#5e747c'], dirt: ['#5a4c40', '#463a30', '#6c5c4c'] },
+    fortress: { grass: ['#5a6a68', '#4a5856', '#6a7c78', '#8a9c96'], dirt: ['#6e6878', '#5a5464', '#827c8c'] },
+    tower: { grass: ['#2c2a52', '#242246', '#383666', '#4c4a80'], dirt: ['#4a4470', '#3a3660', '#5c5684'] },
+    dusk: { grass: ['#6a8a42', '#5a7838', '#7c9c4c', '#a4b85c'], dirt: ['#a07a50', '#866440', '#b8905e'] },
   };
 
   const T = { DEF, TS, FLOOR_CHARS, cache: {} };
@@ -83,8 +97,24 @@
   function stoneTex(theme, v) {
     return tex(`stone_${theme}_${v}`, (x) => {
       const r = U.rng(4000 + v * 17);
-      const base = theme === 'sanctum' ? '#6c6e86' : theme === 'cave' ? '#5a5258' : '#7a7670';
+      const base = theme === 'sanctum' ? '#6c6e86' : theme === 'cave' || theme === 'mine' ? '#5a5258' : theme === 'fortress' || theme === 'snow' ? '#4e5868' : theme === 'tower' ? '#3c3a62' : '#7a7670';
       x.fillStyle = base; x.fillRect(0, 0, TS, TS);
+      if (theme === 'fortress' || theme === 'snow' || theme === 'tower') {
+        // lajes grandes e lisas (bem diferentes das paredes de tijolo)
+        const slab = U.shade(base, (v % 2 ? -0.04 : 0.05));
+        x.fillStyle = slab; x.fillRect(1, 1, TS - 2, TS - 2);
+        x.fillStyle = U.shade(slab, 0.16); x.fillRect(1, 1, TS - 2, 1); x.fillRect(1, 1, 1, TS - 2);
+        x.fillStyle = U.shade(slab, -0.18); x.fillRect(1, TS - 2, TS - 2, 1); x.fillRect(TS - 2, 1, 1, TS - 2);
+        x.fillStyle = U.shade(base, -0.38); x.fillRect(0, TS - 1, TS, 1); x.fillRect(TS - 1, 0, 1, TS);
+        for (let i = 0; i < 8; i++) { x.fillStyle = r() < 0.5 ? U.shade(slab, -0.07) : U.shade(slab, 0.06); x.fillRect(2 + ((r() * 12) | 0), 2 + ((r() * 12) | 0), 1, 1); }
+        if (theme === 'tower') {
+          if (v === 0) { x.fillStyle = '#6a68b0'; x.fillRect(7, 7, 2, 2); x.fillStyle = '#9ae0ff'; x.fillRect(7, 7, 1, 1); }
+        } else if (v === 1 || v === 3) {
+          x.fillStyle = 'rgba(220,240,255,0.35)'; x.fillRect(2 + ((r() * 8) | 0), 2 + ((r() * 8) | 0), 3, 1); x.fillRect(3 + ((r() * 8) | 0), 4 + ((r() * 8) | 0), 2, 1);
+        }
+        if (v === 2) { x.fillStyle = U.shade(slab, -0.3); x.fillRect(9, 3, 1, 1); x.fillRect(10, 4, 1, 2); x.fillRect(11, 6, 1, 2); x.fillRect(12, 8, 1, 1); }
+        return;
+      }
       x.fillStyle = U.shade(base, -0.25);
       x.fillRect(0, 7, TS, 1); x.fillRect(7, 0, 1, 7); x.fillRect(11, 8, 1, 8); x.fillRect(3, 8, 1, 8);
       x.fillStyle = U.shade(base, 0.12);
@@ -128,9 +158,62 @@
       }
     });
   }
+  function snowTex(v) {
+    return tex(`snow_${v}`, (x) => {
+      const r = U.rng(8100 + v * 41);
+      x.fillStyle = '#e2e9f3'; x.fillRect(0, 0, TS, TS);
+      for (let i = 0; i < 22; i++) { x.fillStyle = r() < 0.5 ? '#cdd8e8' : '#f4f8fc'; x.fillRect((r() * TS) | 0, (r() * TS) | 0, (r() * 2 + 1) | 0, 1); }
+      for (let i = 0; i < 2 + v; i++) { const sx = (r() * 13) | 0, sy = (r() * 13) | 0; x.fillStyle = '#b8c6da'; x.fillRect(sx, sy + 1, 3, 1); x.fillStyle = '#ffffff'; x.fillRect(sx, sy, 3, 1); }
+    });
+  }
+  function iceTex(v) {
+    return tex(`ice_${v}`, (x) => {
+      const r = U.rng(8200 + v * 29);
+      x.fillStyle = '#9fd0ec'; x.fillRect(0, 0, TS, TS);
+      for (let i = 0; i < 10; i++) { x.fillStyle = r() < 0.5 ? '#8ac0e0' : '#b8e2f6'; x.fillRect((r() * TS) | 0, (r() * TS) | 0, (r() * 4 + 2) | 0, 1); }
+      // rachaduras e reflexo
+      let px = (r() * 12) | 0, py = (r() * 6) | 0;
+      for (let i = 0; i < 7; i++) { x.fillStyle = '#6aa0c8'; x.fillRect(px, py, 1, 1); px += U.pick([1, 1, 0, -1]); py += 1; }
+      x.fillStyle = '#e8f8ff'; x.fillRect(2 + v, 3, 4, 1); x.fillRect(3 + v, 4, 2, 1);
+      x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(0, 0, TS, 1);
+    });
+  }
+  function starTex(v) {
+    return tex(`star_${v}`, (x) => {
+      const r = U.rng(8300 + v * 53);
+      x.fillStyle = '#28264a'; x.fillRect(0, 0, TS, TS);
+      x.fillStyle = '#1e1c3c'; x.fillRect(0, 15, TS, 1); x.fillRect(15, 0, 1, TS);
+      x.fillStyle = '#3a3870'; x.fillRect(0, 0, TS, 1); x.fillRect(0, 0, 1, TS);
+      for (let i = 0; i < 6; i++) { x.fillStyle = U.pick(['#34326a', '#2e2c5e', '#403e7a']); x.fillRect((r() * TS) | 0, (r() * TS) | 0, 1, 1); }
+      if (v === 1 || v === 3) { // pequena constelação gravada
+        const pts = [[3, 4], [7, 6], [11, 4], [9, 10]];
+        x.fillStyle = '#4e4a8e'; for (let i = 0; i < pts.length - 1; i++) { const [a, b] = pts[i], [c, d] = pts[i + 1]; for (let k = 0; k <= 4; k++) x.fillRect(Math.round(a + (c - a) * k / 4), Math.round(b + (d - b) * k / 4), 1, 1); }
+        x.fillStyle = '#b8b0ff'; for (const [a, b] of pts) x.fillRect(a, b, 1, 1);
+      }
+    });
+  }
+  function carpetTex(v) {
+    return tex(`carpet_${v}`, (x) => {
+      x.fillStyle = '#7a2a34'; x.fillRect(0, 0, TS, TS);
+      x.fillStyle = '#8e3440'; for (let j = 1; j < TS; j += 3) x.fillRect(0, j, TS, 1);
+      x.fillStyle = '#c8a050'; x.fillRect(0, 1, TS, 1); x.fillRect(0, 14, TS, 1);
+      if (v % 2) { x.fillStyle = '#d8b060'; x.fillRect(7, 6, 2, 4); x.fillRect(6, 7, 4, 2); }
+    });
+  }
+  function planksTex(v) {
+    return tex(`planks_${v}`, (x) => {
+      x.fillStyle = '#5e4630'; x.fillRect(0, 0, TS, TS);
+      for (let i = 0; i < 2; i++) {
+        x.fillStyle = '#6e5238'; x.fillRect(0, i * 8 + 1, TS, 6);
+        x.fillStyle = '#7e6044'; x.fillRect(0, i * 8 + 1, TS, 1);
+        x.fillStyle = '#3e2c1e'; x.fillRect(0, i * 8 + 7, TS, 1);
+        x.fillStyle = '#2e2018'; x.fillRect(((i * 7 + v * 5) % 12) + 2, i * 8 + 3, 1, 1);
+      }
+    });
+  }
   function waterTex(frame, theme) {
     return tex(`water_${theme}_${frame}`, (x) => {
-      const dark = theme === 'cave' ? '#1c2c44' : theme === 'sanctum' ? '#24406a' : '#2a5a8a';
+      const dark = theme === 'cave' || theme === 'mine' ? '#1c2c44' : theme === 'sanctum' ? '#24406a' : theme === 'snow' ? '#2a4a6e' : theme === 'tower' ? '#1e2a5a' : '#2a5a8a';
       const mid = U.shade(dark, 0.15), light = U.shade(dark, 0.45);
       x.fillStyle = dark; x.fillRect(0, 0, TS, TS);
       const r = U.rng(77);
@@ -158,8 +241,22 @@
   function wallTex(kind, face, theme, v) {
     return tex(`wall_${kind}_${face ? 'f' : 't'}_${theme}_${v}`, (x) => {
       const r = U.rng(7000 + v * 11 + (face ? 500 : 0));
+      if (kind === 'ice') {
+        if (face) {
+          x.fillStyle = '#6aa8d0'; x.fillRect(0, 0, TS, TS);
+          for (let i = 0; i < 5; i++) { const sx = (r() * 14) | 0; x.fillStyle = U.pick(['#8ac4e4', '#5a98c4', '#a8dcf4']); x.fillRect(sx, (r() * 4) | 0, 2, (r() * 9 + 4) | 0); }
+          x.fillStyle = '#d8f4ff'; x.fillRect(2, 2, 1, 8); x.fillRect(3, 2, 1, 3);
+          x.fillStyle = '#e8faff'; x.fillRect(0, 0, TS, 1);
+          x.fillStyle = 'rgba(20,40,80,0.3)'; x.fillRect(0, 12, TS, 4);
+        } else {
+          x.fillStyle = '#b8e0f4'; x.fillRect(0, 0, TS, TS);
+          for (let i = 0; i < 14; i++) { x.fillStyle = U.pick(['#a0d0ec', '#d0eefc', '#ffffff']); x.fillRect((r() * TS) | 0, (r() * TS) | 0, 2, 1); }
+          x.fillStyle = '#8ac0e0'; x.fillRect(0, 15, TS, 1);
+        }
+        return;
+      }
       if (kind === 'brick') {
-        const base = theme === 'sanctum' ? '#5a5a7a' : '#6e6862';
+        const base = theme === 'sanctum' ? '#5a5a7a' : theme === 'snow' || theme === 'fortress' ? '#6a7282' : theme === 'tower' ? '#46447a' : theme === 'mine' ? '#5a5048' : '#6e6862';
         if (face) {
           x.fillStyle = U.shade(base, -0.15); x.fillRect(0, 0, TS, TS);
           for (let row = 0; row < 4; row++) {
@@ -269,6 +366,11 @@
       if (g === 'magic') return magicTex(v);
       if (g === 'wood') return woodTex(v);
       if (g === 'bridge') return bridgeTex();
+      if (g === 'snow') return snowTex(v);
+      if (g === 'ice') return iceTex(v);
+      if (g === 'star') return starTex(v);
+      if (g === 'carpet') return carpetTex(v);
+      if (g === 'planks') return planksTex(v);
       return grassTex(theme, v);
     };
     if (d.void) { x.fillStyle = '#07060b'; x.fillRect(px, py, TS, TS); return; }
@@ -286,7 +388,7 @@
       return;
     }
     if (d.water) { x.drawImage(waterTex(0, theme), px, py); waterEdges(x, level, tx, ty); return; }
-    if (d.chasm) { chasmDraw(x, level, tx, ty); return; }
+    if (d.chasm) { if (d.starvoid) starVoidDraw(x, level, tx, ty); else chasmDraw(x, level, tx, ty); return; }
     x.drawImage(ground(d.g), px, py);
     if (d.deco) { x.save(); x.translate(px, py); decoDraw(x, d.deco, tx, ty, theme); x.restore(); }
     // franjas de grama sobre chão de menor prioridade
@@ -295,7 +397,35 @@
     const up = T.def(level.tile(tx, ty - 1));
     if (up.wall || up.void) { x.fillStyle = 'rgba(10,6,20,0.35)'; x.fillRect(px, py, TS, 3); x.fillStyle = 'rgba(10,6,20,0.18)'; x.fillRect(px, py + 3, TS, 2); }
     if (d.fence) fenceDraw(x, level, tx, ty);
+    if (d.low) lowWallDraw(x, level, tx, ty);
   };
+
+  function starVoidDraw(x, level, tx, ty) {
+    const px = tx * TS, py = ty * TS;
+    x.fillStyle = '#05041a'; x.fillRect(px, py, TS, TS);
+    const r = U.rng(tx * 7 + ty * 13 + 3);
+    for (let i = 0; i < 5; i++) { x.fillStyle = U.pick(['#2a2860', '#4a46a0', '#8a86e0', '#ffffff']); x.fillRect(px + ((r() * TS) | 0), py + ((r() * TS) | 0), 1, 1); }
+    if (r() < 0.15) { x.fillStyle = '#c8a8ff'; x.fillRect(px + 7, py + 6, 1, 3); x.fillRect(px + 6, py + 7, 3, 1); }
+    const above = T.def(level.tile(tx, ty - 1));
+    if (!above.chasm) {
+      x.fillStyle = '#4a4680'; x.fillRect(px, py, TS, 3);
+      x.fillStyle = '#2a2858'; x.fillRect(px, py + 3, TS, 3);
+      x.fillStyle = 'rgba(120,100,255,0.25)'; x.fillRect(px, py + 6, TS, 2);
+    }
+    if (!T.def(level.tile(tx - 1, ty)).chasm) { x.fillStyle = 'rgba(160,140,255,0.2)'; x.fillRect(px, py, 1, TS); }
+    if (!T.def(level.tile(tx + 1, ty)).chasm) { x.fillStyle = 'rgba(160,140,255,0.2)'; x.fillRect(px + TS - 1, py, 1, TS); }
+  }
+  function lowWallDraw(x, level, tx, ty) {
+    const px = tx * TS, py = ty * TS;
+    const L = T.def(level.tile(tx - 1, ty)).low, R = T.def(level.tile(tx + 1, ty)).low;
+    const base = level.theme === 'tower' ? '#5c5a96' : level.theme === 'snow' || level.theme === 'fortress' ? '#8a92a2' : '#9a948a';
+    x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(px, py + 13, TS, 3);
+    x.fillStyle = U.shade(base, -0.35); x.fillRect(px + (L ? 0 : 1), py + 5, TS - (L ? 0 : 1) - (R ? 0 : 1), 9);
+    x.fillStyle = base; x.fillRect(px + (L ? 0 : 1), py + 5, TS - (L ? 0 : 1) - (R ? 0 : 1), 6);
+    x.fillStyle = U.shade(base, 0.25); x.fillRect(px + (L ? 0 : 1), py + 5, TS - (L ? 0 : 1) - (R ? 0 : 1), 1);
+    x.fillStyle = U.shade(base, -0.2); x.fillRect(px + 7, py + 6, 1, 4); x.fillRect(px + (tx % 2 ? 3 : 11), py + 8, 1, 3);
+    if (level.theme === 'snow') { x.fillStyle = '#f4f8fc'; x.fillRect(px + (L ? 0 : 1), py + 4, TS - (L ? 0 : 1) - (R ? 0 : 1), 2); }
+  }
 
   function isGrass(level, tx, ty) {
     const d = T.def(level.tile(tx, ty));

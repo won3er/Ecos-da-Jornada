@@ -205,6 +205,7 @@
     G: [55, 59, 62], Em: [52, 55, 59], D: [62, 66, 69], E: [52, 56, 59], Gm: [55, 58, 62],
     A: [57, 61, 64], Fmaj7: [53, 57, 60, 64], Cmaj7: [48, 52, 55, 59], Gadd9: [55, 59, 62, 69],
     Bbmaj7: [58, 62, 65, 69], Dsus: [62, 67, 69], Esus: [52, 57, 59],
+    B7: [59, 63, 66, 69],
   };
 
   // Gera melodia determinística: notas do acorde nos tempos fortes, escala nos fracos.
@@ -310,6 +311,60 @@
         [[0, 72, 16]],
       ],
     }),
+    snow: T({
+      bpm: 84, chords: ['Am', 'F', 'C', 'G', 'Am', 'F', 'Em', 'Esus'], reverb: 0.7,
+      parts: ['bellArp', 'pad', 'softBass', 'fluteGen'],
+      seed: 91,
+    }),
+    camp: T({
+      bpm: 88, chords: ['D', 'G', 'Bb', 'A', 'D', 'G', 'Em', 'A'], reverb: 0.45,
+      parts: ['pluckArp8', 'softBass', 'fluteGen', 'shaker'],
+      seed: 97,
+    }),
+    mine: T({
+      bpm: 70, chords: ['Em', 'C', 'Em', 'B7', 'Em', 'Am', 'C', 'B7'], reverb: 0.75,
+      parts: ['drone', 'bellGen', 'slowPerc', 'harpArp8'],
+      seed: 103,
+    }),
+    fortress: T({
+      bpm: 92, chords: ['Dm', 'Gm', 'Bb', 'A', 'Dm', 'Gm', 'C', 'A'], reverb: 0.6,
+      parts: ['strings', 'bass8', 'bellGen', 'lightPerc'],
+      seed: 109,
+    }),
+    boss2: T({
+      bpm: 156, chords: ['Em', 'C', 'D', 'B7', 'Em', 'C', 'Am', 'B7'], reverb: 0.35,
+      parts: ['bass16', 'drumsHeavy', 'bellArp', 'leadGen', 'strings'],
+      seed: 113,
+    }),
+    tower: T({
+      bpm: 74, chords: ['Cmaj7', 'Fmaj7', 'Am', 'G', 'Cmaj7', 'Fmaj7', 'Dm', 'Esus'], reverb: 0.9,
+      parts: ['pad', 'bellArp', 'fluteGen'],
+      seed: 127,
+    }),
+    void: T({
+      bpm: 60, chords: ['Dm', 'Bbmaj7', 'Gm', 'A', 'Dm', 'Bbmaj7', 'Esus', 'A'], reverb: 0.95,
+      parts: ['drone', 'bellGen', 'musicBoxGen'],
+      seed: 131,
+    }),
+    finalboss: T({
+      bpm: 164, chords: ['Dm', 'Bb', 'F', 'C', 'Dm', 'Bb', 'Gm', 'A'], reverb: 0.4,
+      parts: ['bass16', 'drumsHeavy', 'harpArp16', 'leadGen', 'pad', 'strings'],
+      seed: 137,
+    }),
+    hope: T({
+      bpm: 80, chords: ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'C'], reverb: 0.7,
+      parts: ['pad', 'harpArp8', 'bellMel', 'softBass'],
+      melody: [
+        [[0, 76, 4], [4, 79, 4], [8, 84, 6], [14, 83, 2]],
+        [[0, 79, 8], [8, 74, 8]],
+        [[0, 76, 4], [4, 72, 4], [8, 76, 4], [12, 77, 4]],
+        [[0, 77, 12], [12, 76, 4]],
+        [[0, 76, 4], [4, 79, 4], [8, 84, 4], [12, 86, 4]],
+        [[0, 83, 6], [6, 79, 2], [8, 74, 8]],
+        [[0, 77, 4], [4, 76, 4], [8, 74, 4], [12, 72, 4]],
+        [[0, 72, 16]],
+      ],
+    }),
     gameover: T({
       bpm: 60, chords: ['Dm', 'Bb', 'Gm', 'A'], reverb: 0.8, parts: ['pad', 'bellMel'],
       melody: [[[0, 74, 8], [8, 72, 8]], [[0, 70, 16]], [[0, 69, 8], [8, 67, 8]], [[0, 69, 16]]],
@@ -371,6 +426,10 @@
     bellGen(ctx) {
       const mel = ctx.track.genMel[ctx.bar % ctx.track.genMel.length];
       for (const [s, n, l] of mel) if ((s + ctx.bar) % 3 !== 1) ctx.emit('bell', s, n, l, 0.05);
+    },
+    musicBoxGen(ctx) {
+      const mel = ctx.track.genMel[ctx.bar % ctx.track.genMel.length];
+      for (const [s, n, l] of mel) if ((s + ctx.bar) % 2 === 0) ctx.emit('bell', s, n + 12, l, 0.035);
     },
     leadGen(ctx) {
       const mel = ctx.track.genMel[ctx.bar % ctx.track.genMel.length];
@@ -498,6 +557,11 @@
     cave: { noise: { type: 'lowpass', f: 200, v: 0.07 }, events: ['drip', 'drip'], rate: 0.7 },
     magic: { noise: { type: 'highpass', f: 3000, v: 0.012 }, events: ['chime'], rate: 0.5 },
     night: { noise: { type: 'lowpass', f: 400, v: 0.03 }, events: ['cricket'], rate: 1.5 },
+    blizzard: { noise: { type: 'bandpass', f: 800, v: 0.08 }, events: ['gust'], rate: 0.25 },
+    snow: { noise: { type: 'lowpass', f: 600, v: 0.035 }, events: ['crow', 'gust'], rate: 0.1 },
+    mine: { noise: { type: 'lowpass', f: 180, v: 0.06 }, events: ['drip', 'clink'], rate: 0.6 },
+    hall: { noise: { type: 'lowpass', f: 250, v: 0.05 }, events: ['drip'], rate: 0.15 },
+    void: { noise: { type: 'highpass', f: 2400, v: 0.015 }, events: ['chime', 'chime'], rate: 0.35 },
   };
   A.setAmbience = function (name) {
     if (A.ambName === name) return;
@@ -559,6 +623,10 @@
       o.connect(f); f.connect(g); g.connect(out); g.connect(A.reverbSend);
       g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.03, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
       o.start(t); o.stop(t + 0.32);
+    } else if (ev === 'gust') {
+      noiseBurst(out, now, 1.6, 400, 'bandpass', 0.05, 1600);
+    } else if (ev === 'clink') {
+      INST.bell(out, now, mtof(U.pick([96, 98, 100])), 0.2, 0.02);
     } else if (ev === 'leaf') {
       noiseBurst(out, now, 0.25, 3000, 'bandpass', 0.015);
     }
@@ -625,8 +693,8 @@
     barrier(t) { tone(A.sfxBus, t, 'sawtooth', 800, 100, 0.5, 0.08); INST.bell(A.sfxBus, t, 990, 0.5, 0.08); noiseBurst(A.sfxBus, t, 0.4, 4000, 'highpass', 0.12); },
     step(t, o) {
       const s = (o && o.surface) || 'grass';
-      const f = s === 'stone' ? 2200 : s === 'wood' ? 900 : s === 'water' ? 1500 : 1400;
-      noiseBurst(A.sfxBus, t, 0.05, f, 'bandpass', s === 'stone' ? 0.05 : 0.035);
+      const f = s === 'stone' ? 2200 : s === 'wood' ? 900 : s === 'water' ? 1500 : s === 'snow' ? 700 : 1400;
+      noiseBurst(A.sfxBus, t, s === 'snow' ? 0.08 : 0.05, f, s === 'snow' ? 'lowpass' : 'bandpass', s === 'stone' ? 0.05 : s === 'snow' ? 0.06 : 0.035);
     },
     ui(t) { tone(A.sfxBus, t, 'square', 880, 880, 0.03, 0.035); },
     uiOk(t) { tone(A.sfxBus, t, 'square', 990, 990, 0.04, 0.04); tone(A.sfxBus, t + 0.05, 'square', 1320, 1320, 0.07, 0.04); },
@@ -654,6 +722,17 @@
     bridge(t) { INST.bell(A.sfxBus, t, 880, 0.3, 0.04); },
     shatter(t) { noiseBurst(A.sfxBus, t, 0.35, 5000, 'highpass', 0.3); [91, 95, 98].forEach((m, i) => INST.bell(A.sfxBus, t + i * 0.03, mtof(m), 0.2, 0.05)); },
     levelup(t) { [72, 76, 79, 84, 88].forEach((m, i) => INST.harp(A.sfxBus, t + i * 0.06, mtof(m), 0.3, 0.1)); },
+    fire(t) { noiseBurst(A.sfxBus, t, 0.35, 900, 'bandpass', 0.25, 300); tone(A.sfxBus, t, 'sawtooth', 160, 90, 0.3, 0.06); },
+    melt(t) { noiseBurst(A.sfxBus, t, 0.5, 3000, 'highpass', 0.12, 900); tone(A.sfxBus, t, 'sine', 900, 300, 0.4, 0.05); },
+    stasis(t) { [84, 79, 76, 72].forEach((m, i) => INST.bell(A.reverbSend, t + i * 0.09, mtof(m), 0.6, 0.08)); tone(A.sfxBus, t, 'sine', 800, 200, 0.8, 0.05, 0.2); },
+    lift(t) { tone(A.sfxBus, t, 'triangle', 300, 500, 0.12, 0.08); },
+    throw(t) { noiseBurst(A.sfxBus, t, 0.3, 700, 'bandpass', 0.22, 2400); tone(A.sfxBus, t, 'triangle', 400, 900, 0.25, 0.06); },
+    land(t) { noiseBurst(A.sfxBus, t, 0.12, 600, 'lowpass', 0.25); tone(A.sfxBus, t, 'sine', 160, 70, 0.12, 0.12); },
+    freeze(t) { noiseBurst(A.sfxBus, t, 0.4, 5000, 'highpass', 0.18); [91, 96].forEach((m, i) => INST.bell(A.sfxBus, t + i * 0.05, mtof(m), 0.3, 0.05)); },
+    beam(t) { tone(A.sfxBus, t, 'square', 1200, 1800, 0.2, 0.03); },
+    wind(t) { noiseBurst(A.sfxBus, t, 0.8, 500, 'bandpass', 0.12, 1400); },
+    bell(t) { [76, 83, 88].forEach((m, i) => INST.bell(A.reverbSend, t + i * 0.25, mtof(m), 1.2, 0.12)); },
+    teleport(t) { tone(A.sfxBus, t, 'sine', 1800, 300, 0.25, 0.07); noiseBurst(A.sfxBus, t, 0.2, 4000, 'highpass', 0.08); },
   };
   const lastPlayed = {};
   A.sfx = function (name, opts) {
