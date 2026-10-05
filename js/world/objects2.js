@@ -88,10 +88,10 @@
   class Frozen extends Obj {
     constructor(o) {
       super(Object.assign({ solid: true, w: 12, h: 8, hh: 26 }, o));
-      this.npcId = o.npc; this.blocksProjectiles = true;
-      this.flag = o.flag || ('thaw_' + o.npc);
+      this.npcId = o.who || o.npc; this.blocksProjectiles = true;
+      this.flag = o.flag || ('thaw_' + this.npcId);
       this.thawT = 0;
-      const def = G.NPCs[o.npc] || { look: {} };
+      const def = G.NPCs[this.npcId] || { look: {} };
       this.sprite = G.Sprites.npc(def.look || {});
       this.facing = o.facing || 1;
     }
@@ -392,7 +392,7 @@
 
   // ---------------------------------------------------------------- QUEDA DE ESTALACTITES (perigo)
   class Icefall extends Obj {
-    constructor(o) { super(Object.assign({ w: 1, h: 1 }, o)); this.tw = o.tw || 4; this.th = o.th || 3; this.rate = o.rate || 1.2; this.cd = U.rand(0.5, 1.5); this.drops = []; this.layer = -1; this.dmg = o.dmg || 9; }
+    constructor(o) { super(Object.assign({ w: 1, h: 1 }, o)); this.tw = o.tw || 4; this.th = o.th || 3; this.rate = o.rate || 1.2; this.cd = U.rand(0.5, 1.5); this.drops = []; this.layer = -1; this.dmg = o.dmg || 9; this.meteor = !!o.meteor; }
     update(dt, g) {
       const x0 = this.x - 8, y0 = this.y - 16;
       const near = g.players.some((p) => p && !p.isDown && p.x > x0 - 40 && p.x < x0 + this.tw * TS + 40 && p.y > y0 - 30 && p.y < y0 + this.th * TS + 30);
@@ -409,8 +409,8 @@
         d.t -= dt;
         if (d.t <= 0 && !d.done) {
           d.done = true;
-          G.Audio.sfx('shatter');
-          g.particles.burst(d.x, d.y, 10, { colors: ['#bfe4f6', '#ffffff'], speed: 40, life: 0.4, up: 30, g: 200 });
+          G.Audio.sfx(this.meteor ? 'break' : 'shatter');
+          g.particles.burst(d.x, d.y, 10, { colors: this.meteor ? ['#ff8a3a', '#ffd84a', '#5a3a2a'] : ['#bfe4f6', '#ffffff'], speed: 40, life: 0.4, up: 30, g: 200, glow: this.meteor });
           for (const p of g.players) {
             if (!p || p.isDown || U.dist(p.x, p.y, d.x, d.y) > 12) continue;
             if (p.blocking && p.fy < -0.5) { G.Audio.sfx('block'); continue; } // escudo para cima protege
@@ -425,11 +425,47 @@
         const x = Math.round(d.x - cam.rx), y = Math.round(d.y - cam.ry);
         ctx.globalAlpha = 0.45; P.ellipse(ctx, x, y, Math.round(3 + (0.9 - d.t) * 6), 2, '#0a1a2a'); ctx.globalAlpha = 1;
         const fy = y - d.t * 140;
-        ctx.fillStyle = '#a8dcf4'; ctx.fillRect(x - 1, Math.round(fy) - 8, 3, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, Math.round(fy) - 8, 1, 6);
+        if (this.meteor) {
+          const fx = x + Math.round(d.t * 50);
+          P.circle(ctx, fx, Math.round(fy) - 4, 3, '#ff8a3a'); P.circle(ctx, fx, Math.round(fy) - 4, 2, '#ffe680');
+          g.lighting.add(d.x + d.t * 50, d.y - d.t * 140 - 4, 24, 0.7, '#ff9a4a', 0.2);
+          if (Math.random() < 0.5) g.particles.add({ x: d.x + d.t * 50, y: d.y - d.t * 140 - 4, vy: -10, life: 0.3, color: '#ffb84a', glow: true });
+        } else { ctx.fillStyle = '#a8dcf4'; ctx.fillRect(x - 1, Math.round(fy) - 8, 3, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, Math.round(fy) - 8, 1, 6); }
       }
     }
   }
   OT.icefall = Icefall;
+
+  // ---------------------------------------------------------------- PEDRA RÚNICA (só a Lirien ativa, de perto)
+  class RuneStone extends Obj {
+    constructor(o) { super(Object.assign({ solid: true, w: 12, h: 8, hh: 24 }, o)); this.on = false; this.blocksProjectiles = true; }
+    init(g) { if (this.flag && g.flag(this.flag)) this.on = true; }
+    isOn() { return this.on; }
+    canInteract() { return !this.on; }
+    prompt(p) { return p.kind === 'mage' ? 'Ler a runa' : 'Examinar'; }
+    interact(p, g) {
+      if (p.kind !== 'mage') { g.bubble(p, 'Runas élficas. Só a Lirien sabe ler isso.', 2.2); return; }
+      this.on = true;
+      if (this.flag) g.setFlag(this.flag, true);
+      G.Audio.sfx('solved');
+      g.particles.ring(this.x, this.y - 10, 4, 34, 0.6, '#8ae8ff', 2);
+      g.particles.burst(this.x, this.y - 16, 22, { colors: ['#8ae8ff', '#ffffff', '#c8a8ff'], speed: 50, life: 0.8, glow: true });
+      if (this.data.say) g.bubble(p, this.data.say, 2.6);
+    }
+    onHit(kind) { return true; }
+    draw(ctx, cam, g) {
+      const x = Math.round(this.x - cam.rx), y = Math.round(this.y - cam.ry);
+      P.shadow(ctx, x, y, 14, 0.3);
+      ctx.fillStyle = '#2a2430'; ctx.fillRect(x - 6, y - 22, 12, 22); ctx.fillRect(x - 4, y - 24, 8, 2);
+      ctx.fillStyle = '#7a7690'; ctx.fillRect(x - 5, y - 22, 10, 21); ctx.fillStyle = '#9a96b0'; ctx.fillRect(x - 5, y - 22, 2, 20);
+      if (g.level.theme === 'snow') { ctx.fillStyle = '#f2f6fb'; ctx.fillRect(x - 5, y - 24, 10, 2); }
+      ctx.fillStyle = this.on ? '#8ae8ff' : '#4a4a6a';
+      ctx.fillRect(x - 1, y - 18, 2, 10); ctx.fillRect(x - 3, y - 15, 6, 1); ctx.fillRect(x - 3, y - 11, 2, 1); ctx.fillRect(x + 1, y - 9, 2, 1);
+      g.lighting.add(this.x, this.y - 14, this.on ? 50 : 22, 0.7, '#8ae8ff', this.on ? 0.25 : 0.08);
+      if (!this.on && Math.random() < 0.08) g.particles.add({ x: this.x + U.rand(-4, 4), y: this.y - 20, vy: -10, life: 0.8, color: '#8ae8ff', glow: true });
+    }
+  }
+  OT.rune = RuneStone;
 
   // ---------------------------------------------------------------- PORTAL ESTELAR (teleporta quem usar)
   class WarpPad extends Obj {

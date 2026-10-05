@@ -103,6 +103,8 @@
 
     // SIR TALEN (memória de Velmora): Aldren de capa azul e cabelo claro
     S.talen = S.recolor('aldren', { q: '#1a2a5a', r: '#2a4a8a', R: '#4a78c8', d: '#8a6a3a', h: '#c8a060', H: '#e8c880' });
+    const spr = S.talen.down[0];
+    S.portraits.talen = P.make(36, 36, (x) => { x.fillStyle = '#22283a'; x.fillRect(0, 0, 36, 36); x.fillStyle = 'rgba(255,255,255,0.06)'; x.fillRect(0, 0, 36, 12); x.drawImage(spr, 0, 1, spr.width, 18, 0, 2, spr.width * 2, 36); });
   };
 
   function recolorSet(set, pal) {

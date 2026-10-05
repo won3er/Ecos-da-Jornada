@@ -97,7 +97,7 @@
   function stoneTex(theme, v) {
     return tex(`stone_${theme}_${v}`, (x) => {
       const r = U.rng(4000 + v * 17);
-      const base = theme === 'sanctum' ? '#6c6e86' : theme === 'cave' ? '#5a5258' : '#7a7670';
+      const base = theme === 'sanctum' ? '#6c6e86' : theme === 'cave' || theme === 'mine' ? '#5a5258' : theme === 'fortress' || theme === 'snow' ? '#4e5868' : theme === 'tower' ? '#3c3a62' : '#7a7670';
       x.fillStyle = base; x.fillRect(0, 0, TS, TS);
       x.fillStyle = U.shade(base, -0.25);
       x.fillRect(0, 7, TS, 1); x.fillRect(7, 0, 1, 7); x.fillRect(11, 8, 1, 8); x.fillRect(3, 8, 1, 8);

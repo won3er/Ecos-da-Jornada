@@ -34,11 +34,15 @@ G.defineArea({
     b.scatter(1, 28, 48, 11, ';', 0.03, '_');
     b.rect(20, 33, 10, 6, '_');
     b.rect(22, 18, 6, 9, '_');
+    // passagem leste para Velmora Desperta (Capítulo III)
+    b.replace('k', '_', 43, 29, 6, 5);
+    b.rect(49, 31, 1, 2, '_');
   },
   spawns: { sul: [24, 37], start: [24, 37], cima: [43, 4] },
   exits: [
     { x: 23, y: 39, w: 4, to: 'floresta', spawn: 'norte' },
     { x: 44, y: 1, w: 2, h: 2, to: 'caverna', spawn: 'entrada' },
+    { x: 49, y: 31, h: 2, to: 'velmora_noite', spawn: 'oeste' },
   ],
   zones: [
     { x: 20, y: 35, w: 10, h: 1, trigger: 'ruinas_inicio' },
@@ -49,6 +53,9 @@ G.defineArea({
     { enemy: 'skeleton', tx: 16, ty: 31 }, { enemy: 'skeleton', tx: 33, ty: 32 }, { enemy: 'archer', tx: 25, ty: 29 },
     { type: 'sign', tx: 21, ty: 35, text: 'Velmora, a cidade dos magos. Caiu há trezentos anos. Ninguém lembra por quê.' },
     { type: 'chest', tx: 3, ty: 37, flag: 'chest_ruinas1', contents: [{ item: 'pocao' }], gold: 15 },
+    { type: 'gate', id: 'velmora_g1', tx: 48, ty: 31, flag: 'velmora_aberta' }, { type: 'gate', id: 'velmora_g2', tx: 48, ty: 32, flag: 'velmora_aberta' },
+    { type: 'sign', tx: 46, ty: 30, text: 'Uma passagem selada para o leste. Pelas frestas vem um ar frio... e um brilho de estrelas.' },
+    { type: 'waystone', tx: 27, ty: 36, cp: 'cp_ruinas0', name: 'Entrada de Velmora' },
     // pátio da memória
     { type: 'memory', memory: 'ponte', look: 'sword', tx: 25, ty: 22 },
     { type: 'waystone', tx: 31, ty: 24, cp: 'cp_ruinas1' },

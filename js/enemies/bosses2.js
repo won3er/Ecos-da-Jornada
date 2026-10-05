@@ -543,6 +543,13 @@
     // ---------------------------------------------------- fase 3: o trono
     setupThrone(g) {
       this.coreHits = 0;
+      // ninguém começa a fase já em cima da plataforma do trono
+      for (const p of g.players) {
+        if (!p || p.y > 9 * 16) continue;
+        const from = { x: p.x, y: p.y };
+        p.cancelActions(g); p.x = U.clamp(p.x, 5 * 16, 26 * 16); p.y = 12 * 16; g.unstick(p);
+        for (const q of [from, p]) g.particles.burst(q.x, q.y - 10, 14, { colors: ['#c8f0ff', '#ffffff'], speed: 40, life: 0.5 });
+      }
       const wall = g.entities.filter((e) => e.id === 'throne_ice');
       for (const w of wall) w.raise(g);
       for (const e of g.entities) if (e.type === 'knight' && !e.dead) e.die(g);

@@ -697,6 +697,23 @@
       } else if (this.look === 'ribbon') {
         ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, y - 14, 2, 14);
         ctx.fillStyle = '#d84a7a'; ctx.fillRect(x - 3, y - 12, 6, 2); ctx.fillRect(x + 2, y - 10, 2, 5); ctx.fillRect(x - 4, y - 10, 2, 4);
+      } else if (this.look === 'snowman') {
+        P.circle(ctx, x, y - 6, 6, '#c8d4e4'); P.circle(ctx, x, y - 7, 5, '#f2f6fb');
+        P.circle(ctx, x, y - 16, 4, '#c8d4e4'); P.circle(ctx, x, y - 17, 3, '#f2f6fb');
+        ctx.fillStyle = '#1a1a2a'; ctx.fillRect(x - 2, y - 18, 1, 1); ctx.fillRect(x + 1, y - 18, 1, 1);
+        ctx.fillStyle = '#ff8a3a'; ctx.fillRect(x, y - 17, 2, 1);
+        ctx.fillStyle = '#a8dcf4'; ctx.fillRect(x - 5, y - 22, 2, 3); ctx.fillRect(x + 3, y - 22, 2, 3);
+        ctx.fillStyle = '#c84a4a'; ctx.fillRect(x - 3, y - 13, 7, 2);
+      } else if (this.look === 'scarf') {
+        ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 1, y - 20, 3, 20); ctx.fillRect(x - 6, y - 18, 13, 2);
+        ctx.fillStyle = '#c84a4a'; ctx.fillRect(x + 2, y - 17, 4, 2); ctx.fillRect(x + 4, y - 15, 2, 7);
+        ctx.fillStyle = '#f2f6fb'; ctx.fillRect(x - 6, y - 19, 13, 1);
+      } else if (this.look === 'crown') {
+        const k = Math.sin(g.time * 3) * 0.5 + 0.5;
+        P.ellipse(ctx, x, y - 2, 8, 3, '#2a2448');
+        for (const [ox, h] of [[-4, 5], [0, 8], [4, 5]]) { ctx.fillStyle = '#d9b45a'; ctx.fillRect(x + ox - 1, y - 6 - h, 3, h); }
+        ctx.fillStyle = '#d9b45a'; ctx.fillRect(x - 6, y - 7, 13, 3);
+        ctx.globalAlpha = k; P.ring(ctx, x, y - 10, 9, '#c8a8ff'); ctx.globalAlpha = 1;
       } else if (this.look === 'star') {
         const k = Math.sin(g.time * 3) * 0.5 + 0.5;
         P.circle(ctx, x, y - 10, 5, '#f2d98c'); P.circle(ctx, x, y - 10, 3, '#ffffff');
@@ -796,9 +813,16 @@
       else if (this.kind === 'cart') { this.img = G.Props.cartWheel(); this.w = 30; this.h = 10; }
       else if (this.kind === 'campfire') { this.img = G.Props.campfire(); this.w = 14; this.h = 8; this.fire = true; }
       else if (this.kind === 'crystalbig') { this.img = G.Props.crystal('sanctum', o.v || 0); this.w = 14; this.h = 8; }
+      else if (this.kind === 'knightstatue') { this.img = G.Props.knightStatue(); this.w = 18; this.h = 10; }
+      else if (this.kind === 'throne') { this.img = G.Props.throne(); this.w = 36; this.h = 12; }
+      else if (this.kind === 'snowtent') { this.img = G.Props.snowTent(); this.w = 30; this.h = 12; }
+      else if (this.kind === 'minecart') { this.img = G.Props.mineCart(); this.w = 18; this.h = 8; }
+      else if (this.kind === 'shelf') { this.img = G.Props.bookshelf(); this.w = 28; this.h = 10; }
+      else if (this.kind === 'telescope') { this.img = G.Props.telescope(); this.w = 16; this.h = 8; }
+      else if (this.kind === 'pedestal') { this.img = G.Props.starPedestal(o.on); this.w = 14; this.h = 8; }
       else if (this.kind === 'stairs') { this.img = G.Props.stairs(o.sw || 2); this.solid = false; this.layer = -1; this.w = 1; this.h = 1; }
       if (o.door) this.door = o.door;
-      this.blocksProjectiles = this.kind === 'house' || this.kind === 'well' || this.kind === 'statue';
+      this.blocksProjectiles = this.kind === 'house' || this.kind === 'well' || this.kind === 'statue' || this.kind === 'knightstatue' || this.kind === 'throne' || this.kind === 'shelf';
     }
     canInteract(p) { return !!(this.door || this.data.text); }
     prompt() { return this.door ? 'Bater' : 'Olhar'; }

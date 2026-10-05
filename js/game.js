@@ -262,8 +262,15 @@
       return (this.inputCooldownT > 0) || this.dialogue.active || this.co.blocking || this.ui.open || this.transitioning || this.state !== 'play';
     }
     inCutscene() { return this.co.blocking || this.letter > 0.05; }
+    onThaw(id) {
+      this.quests.refresh(this);
+      const n = G.THAW_NPCS.filter((k) => this.flag('thaw_' + k)).length;
+      this.toast(`Morador libertado! (${n}/${G.THAW_NPCS.length})`, 2.5);
+    }
     onItemGained(id, n) {
       this.quests.refresh(this);
+      if (id === 'pagina_diario' && this.questState('diario') === 'inactive') this.startQuest('diario');
+      if (id === 'constelacao' && this.questState('constelacoes') === 'inactive') this.startQuest('constelacoes');
       if (id === 'pagina' && this.questState('paginas') === 'inactive') this.startQuest('paginas');
       if (id === 'pagina') this.quests.refresh(this);
     }
@@ -550,7 +557,7 @@
       this.inMemory = null;
       this.restoreMemBackup();
       this.letterTarget = 0; this.memoryOverlay = 0; this.camera.focus = null;
-      for (const p of this.players) { p.young = false; p.state = 'normal'; }
+      for (const p of this.players) { p.young = false; p.talen = false; p.name = G.Characters[p.key].name; p.state = 'normal'; }
       this.co.start(function* () {
         g.fade.a = 1; g.fade.target = 1;
         if (cp && G.Areas[cp.area]) g.loadArea(cp.area, null, { pos: cp });
@@ -593,9 +600,12 @@
         g.letterbox(true);
         yield g.fadeTo(1, 1.2, '#fff8e8');
         g.present = { area: g.level.id, level: g.level, entities: g.entities, p: g.players.map((p) => ({ x: p.x, y: p.y, dir: p.dir })) };
-        g.memBackup = { spells: g.unlockedSpells.slice(), spell: g.players[0].spell };
+        g.memBackup = { spells: g.unlockedSpells.slice(), spell: g.players[0].spell, abilities: [...g.abilities] };
         g.inMemory = id;
-        g.players[1].young = true;
+        const p2 = def.p2 || 'kid';
+        g.players[1].young = p2 === 'kid';
+        g.players[1].talen = p2 === 'talen';
+        if (p2 === 'talen') g.players[1].name = 'Sir Talen';
         g.loadArea(def.area, 'start', { silent: true });
         yield C.wait(0.3);
         g.card = { text: 'MEMÓRIA', sub: def.when.toUpperCase(), t: 0, dur: 2.8, white: true };
@@ -614,7 +624,7 @@
       this.co.start(function* () {
         yield g.fadeTo(1, 1.2, '#fff8e8');
         g.inMemory = null;
-        g.players[1].young = false;
+        g.players[1].young = false; g.players[1].talen = false; g.players[1].name = G.Characters.aldren.name;
         g.restoreMemBackup();
         g.memories.add(id);
         const pr = g.present;
@@ -653,6 +663,7 @@
     restoreMemBackup() {
       if (!this.memBackup) return;
       this.unlockedSpells = this.memBackup.spells;
+      if (this.memBackup.abilities) this.abilities = new Set(this.memBackup.abilities);
       if (this.players[0]) this.players[0].spell = this.unlockedSpells.includes(this.memBackup.spell) ? this.memBackup.spell : this.unlockedSpells[0];
       this.memBackup = null;
     }

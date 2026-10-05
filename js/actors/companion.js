@@ -131,7 +131,7 @@
       this.stuckT = 0;
       // só "pula" para perto do líder se existir caminho a pé (a IA é que não
       // achou). Se não há caminho (portão fechado, abismo, muro), espera.
-      if (!g.reachable(me.x, me.y, leader.x, leader.y, 10)) {
+      if (!g.level.def.aiFreeTeleport && !g.reachable(me.x, me.y, leader.x, leader.y, 10)) {
         if (!this._noPathT || g.time - this._noPathT > 6) { this._noPathT = g.time; me.say('Não consigo passar por aqui!', 1.8); }
         return;
       }
@@ -141,7 +141,7 @@
         const tx = Math.floor(nx / 16), ty = Math.floor((ny - 2) / 16);
         if (G.Physics.blocked(g, b, me) || g.level.isHole(tx, ty)) continue;
         // nunca aparece do outro lado de um portão/parede em relação ao líder
-        if (!g.reachable(leader.x, leader.y, nx, ny, 3)) continue;
+        if (!g.level.def.aiFreeTeleport && !g.reachable(leader.x, leader.y, nx, ny, 3)) continue;
         me.cancelActions(g);
         if (me.state !== 'normal') { me.state = 'normal'; me.stateT = 0; }
         g.particles.burst(me.x, me.y - 10, 10, { colors: ['#ffe8a0', '#ffffff'], speed: 30, life: 0.4, glow: true });

@@ -338,6 +338,7 @@
     // ---------------------------------------------------- desenho
     spriteSet(g) {
       if (this.young) return G.Sprites.kid;
+      if (this.talen) return G.Sprites.talen;
       return g.spriteFor(this.key);
     }
     frame() {
