@@ -58,6 +58,8 @@
 
   function keyDown(list) { return list.some((c) => keys.has(c)); }
   function keyPressed(list) { return list.some((c) => keysPressed.has(c)); }
+  // segurado agora OU tocado desde o último quadro (toques muito rápidos não se perdem)
+  function keyHeld(list) { return keyDown(list) || keyPressed(list); }
 
   function readPad(i) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -83,7 +85,7 @@
       let my = (keyDown(bnd.down) ? 1 : 0) - (keyDown(bnd.up) ? 1 : 0);
       const pad = pads[p];
       const downNow = {};
-      for (const k of BUTTONS) downNow[k] = keyDown(bnd[k]);
+      for (const k of BUTTONS) downNow[k] = keyHeld(bnd[k]);
       if (pad) {
         if (pad.mx || pad.my) { mx = pad.mx; my = pad.my; I.lastDevice = 'pad'; }
         for (const k of BUTTONS) if (pad[k]) { downNow[k] = true; I.lastDevice = 'pad'; }
@@ -119,10 +121,10 @@
     // Menu (qualquer jogador navega)
     const anyPad = pads[0] || pads[1];
     const dirs = {
-      up: keyDown(['KeyW', 'ArrowUp']) || pads.some((p) => p && p.my < -0.5),
-      down: keyDown(['KeyS', 'ArrowDown']) || pads.some((p) => p && p.my > 0.5),
-      left: keyDown(['KeyA', 'ArrowLeft']) || pads.some((p) => p && p.mx < -0.5),
-      right: keyDown(['KeyD', 'ArrowRight']) || pads.some((p) => p && p.mx > 0.5),
+      up: keyHeld(['KeyW', 'ArrowUp']) || pads.some((p) => p && p.my < -0.5),
+      down: keyHeld(['KeyS', 'ArrowDown']) || pads.some((p) => p && p.my > 0.5),
+      left: keyHeld(['KeyA', 'ArrowLeft']) || pads.some((p) => p && p.mx < -0.5),
+      right: keyHeld(['KeyD', 'ArrowRight']) || pads.some((p) => p && p.mx > 0.5),
     };
     for (const d in dirs) {
       if (dirs[d]) {

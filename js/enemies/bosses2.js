@@ -17,7 +17,7 @@
   class Grumak extends G.Enemy {
     constructor(o) {
       super(o, { type: 'grumak', hp: 440, speed: 30, dmg: 15, aggro: 999, heavyBody: true, noFreeze: true, box: { w: 28, h: 12, hw: 34, hh: 38 }, gold: 0, drops: {}, blood: ['#c8f0ff', '#ffffff'], deathColors: ['#c8f0ff', '#ffffff', '#5a98c4'] });
-      this.boss = true; this.name = 'Grumak, o Urso-de-Geada';
+      this.boss = true; this.name = 'Grumak, o Urso-de-Geada'; this.camLift = 30;
       this.state = 'sleep';
       this.plates = 3; this.maxPlates = 3; this.plateCd = 0;
       this.exposedT = 0; this.stunT2 = 0;
@@ -334,7 +334,7 @@
   class Ysveth extends G.Enemy {
     constructor(o) {
       super(o, { type: 'ysveth', hp: 620, speed: 40, dmg: 12, aggro: 999, heavyBody: true, noFreeze: true, noStun: true, box: { w: 18, h: 10, hw: 24, hh: 46 }, gold: 0, drops: {}, deathColors: ['#c8f0ff', '#ffffff', '#f2d98c'] });
-      this.boss = true; this.name = 'Ysveth, a Geada Eterna';
+      this.boss = true; this.name = 'Ysveth, a Geada Eterna'; this.camLift = 34; this.camWeight = 0.32;
       this.flying = true; this.z = 14;
       this.state = 'dormant'; this.phase = 1;
       this.center = { x: this.x, y: this.y };

@@ -762,7 +762,7 @@
 
       this.particles.update(dt);
       const bb = this.bossBar;
-      this.camera.extra = bb && !bb.dead ? { x: bb.x, y: bb.y - 24 } : null;
+      this.camera.extra = bb && !bb.dead ? { x: bb.x, y: bb.y - (bb.z || 0) - (bb.camLift != null ? bb.camLift : 24), w: bb.camWeight || 0.28 } : null;
       this.camera.update(dt, this.players);
       G.HUD.update(dt, this);
     }

@@ -281,7 +281,7 @@
   class Nyxara extends G.Enemy {
     constructor(o) {
       super(o, { type: 'nyxara', hp: 900, speed: 40, dmg: 14, aggro: 999, heavyBody: true, noFreeze: true, noStun: true, noBurn: true, box: { w: 22, h: 10, hw: 34, hh: 56 }, gold: 0, drops: {}, deathColors: ['#f2d98c', '#ffffff', '#c8a8ff'] });
-      this.boss = true; this.name = 'Nyxara, a Mãe das Estrelas';
+      this.boss = true; this.name = 'Nyxara, a Mãe das Estrelas'; this.camLift = 50; this.camWeight = 0.4;
       this.flying = true; this.z = 18;
       this.state = 'dormant'; this.phase = 1;
       this.center = { x: this.x, y: this.y };
@@ -512,7 +512,10 @@
         const sb = al ? al.shieldBox() : null;
         if (!reflected && al && al.blocking && !al.isDown && U.pointInRect(x, y - 8, { x: Math.min(sb.x, al.x - 10) - 4, y: Math.min(sb.y, al.y - 28) - 4, w: Math.max(sb.w, 20) + 8, h: 40 }) && (al.fx * -dx + al.fy * -dy) > 0.3) {
           segs.push([sx, sy, x, y]); sx = x; sy = y;
-          dx = al.fx; dy = al.fy; reflected = true;
+          // virado mais ou menos para a Nyxara: o escudo devolve a luz direto nela
+          const tx = this.x - x, ty = this.y - 6 - y, tl = Math.hypot(tx, ty) || 1;
+          const aim = (al.fx * tx + al.fy * ty) / tl > 0.4;
+          dx = aim ? tx / tl : al.fx; dy = aim ? ty / tl : al.fy; reflected = true;
           if (!this._refT || g.time - this._refT > 0.4) { this._refT = g.time; g.particles.text(al.x, al.y - 36, 'PRISMA!', '#ffe680'); }
           continue;
         }

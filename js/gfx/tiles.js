@@ -99,6 +99,22 @@
       const r = U.rng(4000 + v * 17);
       const base = theme === 'sanctum' ? '#6c6e86' : theme === 'cave' || theme === 'mine' ? '#5a5258' : theme === 'fortress' || theme === 'snow' ? '#4e5868' : theme === 'tower' ? '#3c3a62' : '#7a7670';
       x.fillStyle = base; x.fillRect(0, 0, TS, TS);
+      if (theme === 'fortress' || theme === 'snow' || theme === 'tower') {
+        // lajes grandes e lisas (bem diferentes das paredes de tijolo)
+        const slab = U.shade(base, (v % 2 ? -0.04 : 0.05));
+        x.fillStyle = slab; x.fillRect(1, 1, TS - 2, TS - 2);
+        x.fillStyle = U.shade(slab, 0.16); x.fillRect(1, 1, TS - 2, 1); x.fillRect(1, 1, 1, TS - 2);
+        x.fillStyle = U.shade(slab, -0.18); x.fillRect(1, TS - 2, TS - 2, 1); x.fillRect(TS - 2, 1, 1, TS - 2);
+        x.fillStyle = U.shade(base, -0.38); x.fillRect(0, TS - 1, TS, 1); x.fillRect(TS - 1, 0, 1, TS);
+        for (let i = 0; i < 8; i++) { x.fillStyle = r() < 0.5 ? U.shade(slab, -0.07) : U.shade(slab, 0.06); x.fillRect(2 + ((r() * 12) | 0), 2 + ((r() * 12) | 0), 1, 1); }
+        if (theme === 'tower') {
+          if (v === 0) { x.fillStyle = '#6a68b0'; x.fillRect(7, 7, 2, 2); x.fillStyle = '#9ae0ff'; x.fillRect(7, 7, 1, 1); }
+        } else if (v === 1 || v === 3) {
+          x.fillStyle = 'rgba(220,240,255,0.35)'; x.fillRect(2 + ((r() * 8) | 0), 2 + ((r() * 8) | 0), 3, 1); x.fillRect(3 + ((r() * 8) | 0), 4 + ((r() * 8) | 0), 2, 1);
+        }
+        if (v === 2) { x.fillStyle = U.shade(slab, -0.3); x.fillRect(9, 3, 1, 1); x.fillRect(10, 4, 1, 2); x.fillRect(11, 6, 1, 2); x.fillRect(12, 8, 1, 1); }
+        return;
+      }
       x.fillStyle = U.shade(base, -0.25);
       x.fillRect(0, 7, TS, 1); x.fillRect(7, 0, 1, 7); x.fillRect(11, 8, 1, 8); x.fillRect(3, 8, 1, 8);
       x.fillStyle = U.shade(base, 0.12);
