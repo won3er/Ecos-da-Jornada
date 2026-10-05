@@ -49,6 +49,8 @@
     god() { game.godMode = !game.godMode; return game.godMode; },
     give(id, n = 1) { game.inv.add(id, n, game); },
     points(n = 5) { game.prog.points += n; },
-    unlockAll() { game.unlockedSpells = ['frost', 'tk', 'bridge']; game.abilities.add('reflexao'); },
+    unlockAll() { game.unlockedSpells = ['frost', 'tk', 'bridge', 'fire', 'stasis']; for (const a of ['reflexao', 'arremesso', 'salto']) game.abilities.add(a); },
+    chapter(n) { if (n >= 2) game.setFlag('chapter1_done', true); if (n >= 3) game.setFlag('chapter2_done', true); this.unlockAll(); game.startChapter(n); },
+    complete() { const c = G.completion(game); return c.pct + '% ' + c.rows.map((r) => r[0] + ' ' + r[1] + '/' + r[2]).join(', '); },
   };
 })();

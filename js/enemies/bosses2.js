@@ -367,6 +367,7 @@
         this.vulnT = Math.max(this.vulnT, 3); this.flash = 0.2;
         g.comboText(this.x, this.y - 70, 'LANÇA DEVOLVIDA!'); g.registerCombo('lanca');
         this.hp -= 18; g.particles.text(this.x, this.y - 56, 18, '#ffd84a');
+        const fl = this.phaseFloor(); if (fl !== null && this.hp < fl) this.hp = fl;
         if (this.hp <= 0) this.die(g);
         return true;
       }
@@ -390,6 +391,7 @@
       return super.takeHit(hit, g);
     }
     modifyDamage(d, hit) { return d * (this.dazedT > 0 ? 1.4 : 1); }
+    phaseFloor() { return this.phase === 1 ? Math.floor(this.maxHp * 0.655) : this.phase === 2 ? Math.floor(this.maxHp * 0.335) : null; }
     die(g) {
       if (this.state === 'dying') return;
       this.state = 'dying'; this.stateT = 0; this.hp = 0;

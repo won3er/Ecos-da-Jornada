@@ -333,6 +333,7 @@
       return super.takeHit(hit, g);
     }
     modifyDamage(d, hit) { const physical = hit.kind === 'sword' || hit.kind === 'heavy'; return d * (physical ? 1.3 : 1); }
+    phaseFloor() { return this.phase === 1 ? Math.floor(this.maxHp * 0.745) : this.phase === 2 ? Math.floor(this.maxHp * 0.495) : this.phase === 3 ? Math.floor(this.maxHp * 0.245) : 1; }
     breakVeil(g) {
       this.shield = 0; this.dazedT = 6; this.state = 'dazed'; this.stateT = 0;
       G.Audio.sfx('shatter'); G.Audio.sfx('roar');
@@ -345,7 +346,7 @@
       this.coreHits++;
       this.flash = 0.2; G.Audio.sfx('shatter'); g.camera.shake(5, 0.4);
       g.comboText(this.corePos().x, this.corePos().y - 40, 'O NÚCLEO RACHA!');
-      this.hp -= 45; g.particles.text(this.corePos().x, this.corePos().y - 30, 45, '#ffd84a');
+      this.hp = Math.max(Math.floor(this.maxHp * 0.245), this.hp - 45); g.particles.text(this.corePos().x, this.corePos().y - 30, 45, '#ffd84a');
       if (this.coreHits >= 3) {
         this.coreDown = false; this.coreHits = 0;
         this.dazedT = 7; this.state = 'dazed'; this.stateT = 0;
@@ -508,17 +509,18 @@
         const td = G.Tiles.def(g.level.tile(Math.floor(x / 16), Math.floor(y / 16)));
         if (td.tall || td.void) break;
         if (preview) continue;
-        if (!reflected && al && al.blocking && !al.isDown && U.pointInRect(x, y - 8, al.shieldBox()) && (al.fx * -dx + al.fy * -dy) > 0.3) {
+        const sb = al ? al.shieldBox() : null;
+        if (!reflected && al && al.blocking && !al.isDown && U.pointInRect(x, y - 8, { x: Math.min(sb.x, al.x - 10) - 4, y: Math.min(sb.y, al.y - 28) - 4, w: Math.max(sb.w, 20) + 8, h: 40 }) && (al.fx * -dx + al.fy * -dy) > 0.3) {
           segs.push([sx, sy, x, y]); sx = x; sy = y;
           dx = al.fx; dy = al.fy; reflected = true;
           if (!this._refT || g.time - this._refT > 0.4) { this._refT = g.time; g.particles.text(al.x, al.y - 36, 'PRISMA!', '#ffe680'); }
           continue;
         }
         if (reflected) {
-          if (U.pointInRect(x, y - 8, { x: this.x - 20, y: this.y - this.z - 60, w: 40, h: 64 })) {
+          if (U.pointInRect(x, y - 8, { x: this.x - 22, y: this.y - this.z - 64, w: 44, h: this.z + 72 })) {
             if (!this.hitCd.has(this)) {
               this.hitCd.set(this, 0.25);
-              this.hp -= 9; this.flash = 0.1; this.hpShowT = 1;
+              this.hp = Math.max(Math.floor(this.maxHp * 0.495), this.hp - 9); this.flash = 0.1; this.hpShowT = 1;
               g.particles.burst(this.x, this.y - this.z - 30, 10, { colors: ['#ffe680', '#ffffff'], speed: 60, life: 0.4, glow: true });
               if (!this._rcount) this._rcount = 0;
               this._rcount++;

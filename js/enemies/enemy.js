@@ -92,6 +92,8 @@
       dmg = this.modifyDamage(dmg, hit, g);
       dmg = Math.max(1, Math.round(dmg));
       this.hp -= dmg;
+      // chefes não pulam fases com um golpe forte: a vida para no limite da fase
+      if (this.phaseFloor) { const f = this.phaseFloor(); if (f !== null && f !== undefined && this.hp < f) this.hp = f; }
       this.flash = 0.1;
       this.hpShowT = 2.5;
       this.aggro = true;

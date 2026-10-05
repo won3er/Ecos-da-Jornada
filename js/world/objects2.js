@@ -240,7 +240,7 @@
         const td = G.Tiles.def(g.level.tile(tx, ty));
         if (td.tall || td.void) break;
         // escudo erguido do Aldren reflete o feixe para onde ele olha
-        if (al && al.blocking && !al.isDown && bounces < 12 && U.pointInRect(x, y - 8, al.shieldBox())) {
+        if (al && al.blocking && !al.isDown && bounces < 12 && U.pointInRect(x, y - 8, { x: al.x - 12, y: al.y - 30, w: 24, h: 32 })) {
           const nd = DIRV[al.dir];
           if (nd && !(nd[0] === -d[0] && nd[1] === -d[1] && false)) {
             segs.push([sx, sy, x, y]);

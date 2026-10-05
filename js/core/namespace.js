@@ -5,7 +5,7 @@ window.G = {
   VIEW_W: 480,
   VIEW_H: 270,
   TILE: 16,
-  VERSION: '1.0.0',
+  VERSION: '2.0.0',
   debug: false,
   // Registros preenchidos pelos arquivos de dados / fases
   Areas: {},

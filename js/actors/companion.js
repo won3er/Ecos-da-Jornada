@@ -36,8 +36,8 @@
       if (!leader || g.inputLocked()) return inp;
       if (me.state === 'down' || me.state === 'fall') return inp;
 
-      // reviver o líder vem antes de tudo
-      if (leader.state === 'down') {
+      // reviver o líder (ou quebrar o gelo dele) vem antes de tudo
+      if (leader.state === 'down' || leader.frozenSolid > 0) {
         this.hold = null;
         const d = U.dist(me.x, me.y, leader.x, leader.y);
         if (d > 16) { const n = U.norm(leader.x - me.x, leader.y - me.y); inp.mx = n.x; inp.my = n.y; this.unstuck(me, leader, g, dt, d); }

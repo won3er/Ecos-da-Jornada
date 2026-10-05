@@ -33,6 +33,7 @@ G.defineArea({
     b.rect(18, 3, 14, 10, '_');
     b.frame(17, 2, 16, 12, '#');
     b.rect(24, 13, 2, 1, '_');
+    b.rect(24, 2, 2, 1, 'z');
     // praça central
     b.rect(18, 15, 16, 10, '_');
     b.replace('k', '_', 17, 2, 16, 24);

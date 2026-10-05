@@ -489,7 +489,7 @@
       gen.forEach(([k, d], i) => { const kw = UI().keycap(ctx, k, x + 10, yy + 12 + i * 13); F().draw(ctx, d, x + 15 + kw, yy + 14 + i * 13, '#ece6f6', { shadow: true }); });
       F().draw(ctx, 'Controles (2 gamepads)', x + w / 2 + 4, yy, '#f2d98c', { shadow: true });
       F().drawWrapped(ctx, 'Analógico/D-pad: mover • X: ataque • B: habilidade • A: investida/interagir • Y: trocar/provocar • Start: pausa • Select: trocar (solo). Controle 1 = Lirien, 2 = Aldren.', x + w / 2 + 4, yy + 13, w / 2 - 20, '#c8c0d8', { shadow: true, lineHeight: 11 });
-      F().drawWrapped(ctx, 'Dica: segurem os botões de interagir perto do parceiro caído para reviver. Se os dois caírem, voltam à última Pedra de Retorno.', x + 10, y + h - 26, w - 20, '#8a84a8', { shadow: true, lineHeight: 11 });
+      F().drawWrapped(ctx, 'Técnicas novas: Aldren aperta 3 perto da Lirien para ERGUÊ-LA e de novo para ARREMESSAR; 3 na beira de um vão curto = SALTO. Segurem interagir perto do parceiro caído (ou congelado) para ajudar.', x + 10, y + h - 26, w - 20, '#8a84a8', { shadow: true, lineHeight: 11 });
     }
   }
 

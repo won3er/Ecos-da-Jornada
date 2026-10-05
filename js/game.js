@@ -877,7 +877,7 @@
       const kind = this.level.def.ambient;
       if (!kind) return;
       const cam = this.camera;
-      const rate = { leaves: 2, dust: 3, fireflies: 1.5, sparkles: 4, embers: 3, petals: 2 }[kind] || 1;
+      const rate = { leaves: 2, dust: 3, fireflies: 1.5, sparkles: 4, embers: 4, petals: 2, snow: 9, blizzard: 22 }[kind] || 1;
       if (Math.random() < rate * dt) {
         const x = cam.x + Math.random() * W, y = cam.y + Math.random() * H;
         if (kind === 'leaves') this.particles.add({ x, y: cam.y - 4, vx: U.rand(5, 20), vy: U.rand(12, 22), life: 8, color: U.pick(['#6aa04a', '#a8b84a', '#c8a03a']), wobble: 20, fade: false });
@@ -885,6 +885,9 @@
         if (kind === 'fireflies') this.particles.add({ x, y, vx: U.rand(-6, 6), vy: U.rand(-6, 6), life: 4, color: '#e8f0a0', glow: true, wobble: 10, flicker: true });
         if (kind === 'sparkles') this.particles.add({ x, y, vy: U.rand(-12, -4), life: 2.5, color: U.pick(['#8ae8ff', '#c8a8ff', '#ffffff']), glow: true });
         if (kind === 'petals') this.particles.add({ x, y: cam.y - 4, vx: U.rand(-10, 10), vy: U.rand(10, 18), life: 9, color: U.pick(['#ffd0f0', '#ffffff', '#ffb0d0']), wobble: 16, fade: false });
+        if (kind === 'snow') this.particles.add({ x: x + 20, y: cam.y - 4, vx: U.rand(-8, 2), vy: U.rand(14, 26), life: 12, color: U.pick(['#ffffff', '#e8f0ff', '#c8d8f0']), wobble: 10, drag: 0, size: Math.random() < 0.2 ? 2 : 1 });
+        if (kind === 'blizzard') this.particles.add({ x: cam.x - 10, y: cam.y + Math.random() * H, vx: U.rand(90, 160), vy: U.rand(10, 40), life: 4, color: U.pick(['#ffffff', '#e8f0ff', '#c8d8f0']), drag: 0, size: Math.random() < 0.3 ? 2 : 1 });
+        if (kind === 'embers') this.particles.add({ x, y: cam.y + H + 4, vx: U.rand(-8, 8), vy: U.rand(-30, -14), life: 7, color: U.pick(['#ff8a3a', '#ffd84a', '#ff6a3a']), glow: true, wobble: 12, drag: 0 });
       }
     }
 
