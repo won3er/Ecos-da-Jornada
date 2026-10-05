@@ -697,8 +697,10 @@
       this.toasts = this.toasts.filter((t) => t.t > 0);
 
       if (this.state === 'title') {
-        this.title.update(dt, this);
-        this.ui.update(dt, this);
+        // um menu aberto neste quadro (ex.: confirmação de novo jogo) só começa
+        // a ler a entrada no próximo, para o mesmo Enter não fechá-lo na hora
+        if (this.ui.open) this.ui.update(dt, this);
+        else this.title.update(dt, this);
         return;
       }
 
