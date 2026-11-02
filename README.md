@@ -15,10 +15,6 @@ Uma maga élfica que vive há séculos e um herói espadachim atravessam três c
 - **Arte, música e efeitos gerados por código**; roda no navegador, sem instalar nada.
 - Em português e inglês.
 
----
-
-Este repositório é uma **vitrine** do projeto: mostra o que o jogo é e como ele é. O código-fonte não é público.
-
 ## Telas
 
 ![Tela de título](images/titulo.png)
