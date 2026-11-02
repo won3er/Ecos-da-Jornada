@@ -2,6 +2,8 @@
 
 Aventura cooperativa 2D em pixel art para dois jogadores no mesmo computador ou online por convite.
 
+**Jogue no navegador:** https://ecos-alpha.vercel.app
+
 ## O jogo
 Uma maga élfica que vive há séculos e um herói espadachim atravessam três capítulos sobre memória, passagem do tempo e cooperação. O jogo está completo, com final, créditos e pós-jogo para chegar aos 100%.
 
@@ -16,5 +18,11 @@ Uma maga élfica que vive há séculos e um herói espadachim atravessam três c
 ---
 
 Este repositório é uma **vitrine** do projeto: mostra o que o jogo é e como ele é. O código-fonte não é público.
+
+## Telas
+
+![Tela de título](images/titulo.png)
+
+![Capítulo I](images/capitulo-1.png)
 
 Desenvolvido por [@won3er](https://github.com/won3er).
